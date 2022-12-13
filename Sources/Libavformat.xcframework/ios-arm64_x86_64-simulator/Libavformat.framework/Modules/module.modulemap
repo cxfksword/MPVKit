@@ -1,0 +1,4 @@
+framework module Libavformat [system] {
+    umbrella "."
+    export *
+}
