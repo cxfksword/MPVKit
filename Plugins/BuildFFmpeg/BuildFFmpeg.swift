@@ -4,13 +4,18 @@ import Foundation
 // @main struct BuildFFmpeg: CommandPlugin {
 @main enum BuildFFmpeg {
     static func main() {
-        performCommand(arguments: Array(CommandLine.arguments.dropFirst()))
+        do {
+            try performCommand(arguments: Array(CommandLine.arguments.dropFirst()))
+        } catch {
+            print(error.localizedDescription)
+            exit(0)
+        }
     }
 
 //    func performCommand(context _: PluginContext, arguments: [String]) throws {
 //        performCommand(arguments: arguments)
 //    }
-    static func performCommand(arguments: [String]) {
+    static func performCommand(arguments: [String]) throws {
         if Utility.shell("which brew") == nil {
             print("""
             You need to run the script first
@@ -21,7 +26,7 @@ import Foundation
 
         let path = URL.currentDirectory + "Script"
         if !FileManager.default.fileExists(atPath: path.path) {
-            try? FileManager.default.createDirectory(at: path, withIntermediateDirectories: false, attributes: nil)
+            try FileManager.default.createDirectory(at: path, withIntermediateDirectories: false, attributes: nil)
         }
         FileManager.default.changeCurrentDirectoryPath(path.path)
         BaseBuild.platforms = arguments.compactMap { argument in
@@ -36,90 +41,143 @@ import Foundation
             BaseBuild.platforms = PlatformType.allCases
         }
         if arguments.firstIndex(of: "enable-mpv") != nil {
-            BuildMPV().buildALL()
+            try BuildMPV().buildALL()
             return
         }
         if arguments.firstIndex(of: "enable-openssl") != nil {
-            BuildOpenSSL().buildALL()
-            // BuildBoringSSL().buildALL()
+            try BuildOpenSSL().buildALL()
+//            try BuildBoringSSL().buildALL()
         }
         if Utility.shell("which pkg-config") == nil {
             Utility.shell("brew install pkg-config")
         }
         if arguments.firstIndex(of: "enable-libsrt") != nil {
-            BuildSRT().buildALL()
+            try BuildSRT().buildALL()
         }
         if arguments.firstIndex(of: "enable-libass") != nil {
-            BuildASS().buildALL()
-            return
+            try BuildASS().buildALL()
         }
-        BuildFFMPEG(arguments: arguments).buildALL()
+        try BuildFFMPEG(arguments: arguments).buildALL()
     }
 }
 
 private class BaseBuild {
     static var platforms = PlatformType.allCases
     private let library: String
-    init(library: String) {
+    let directoryURL: URL
+    init(library: String, directoryName: String) {
         self.library = library
+        directoryURL = URL.currentDirectory + directoryName
     }
 
-    func buildALL() {
-        try? FileManager.default.removeItem(at: URL.currentDirectory + library)
+    func buildALL() throws {
+        try FileManager.default.removeItem(at: URL.currentDirectory + library)
         for platform in BaseBuild.platforms {
             for arch in platform.architectures() {
-                build(platform: platform, arch: arch)
+                try build(platform: platform, arch: arch)
             }
         }
-        createXCFramework()
+        try createXCFramework()
     }
 
     func architectures(_ platform: PlatformType) -> [ArchType] {
         platform.architectures()
     }
 
-    private func build(platform: PlatformType, arch: ArchType) {
+    func build(platform: PlatformType, arch: ArchType) throws {
         let url = scratch(platform: platform, arch: arch)
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
-        let cflags = "-arch " + arch.rawValue + platform.deploymentTarget(arch)
-        innerBuid(platform: platform, arch: arch, cflags: cflags, buildDir: url)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
+        let environment = environment(platform: platform, arch: arch)
+        let configure = directoryURL + "Configure"
+        let CMakeFiles = directoryURL + "CMakeFiles"
+        if FileManager.default.fileExists(atPath: configure.path) {
+            try Utility.launch(path: configure.path, arguments: arguments(platform: platform, arch: arch), currentDirectoryURL: url, environment: environment)
+            try Utility.launch(path: "/usr/bin/make", arguments: ["clean", "-s"], currentDirectoryURL: url)
+        } else if FileManager.default.fileExists(atPath: CMakeFiles.path) {
+            try Utility.launch(path: "/usr/local/bin/cmake", arguments: [directoryURL.path], currentDirectoryURL: url, environment: environment)
+        }
+        try Utility.launch(path: "/usr/bin/make", arguments: ["-s"], currentDirectoryURL: url, environment: environment)
+        try Utility.launch(path: "/usr/bin/make", arguments: ["-j8", "install", "-s"], currentDirectoryURL: url, environment: environment)
     }
 
-    func innerBuid(platform _: PlatformType, arch _: ArchType, cflags _: String, buildDir _: URL) {}
+    func pkgConfigPath(platform _: PlatformType, arch _: ArchType) -> String {
+        ""
+    }
 
-    func createXCFramework() {
+    func environment(platform: PlatformType, arch: ArchType) -> [String: String] {
+        ["LC_CTYPE": "C",
+         "CC": ccFlags(platform: platform, arch: arch),
+         "CFLAGS": cFlags(platform: platform, arch: arch),
+         "CPPFLAGS": cFlags(platform: platform, arch: arch),
+         "LDFLAGS": ldFlags(platform: platform, arch: arch),
+         "PKG_CONFIG_PATH": pkgConfigPath(platform: platform, arch: arch)]
+    }
+
+    func ccFlags(platform _: PlatformType, arch _: ArchType) -> String {
+        "/usr/bin/clang "
+    }
+
+    func cFlags(platform: PlatformType, arch: ArchType) -> String {
+        var cflags = "-arch " + arch.rawValue + " " + platform.deploymentTarget(arch)
+        if platform == .macos || platform == .maccatalyst {
+            cflags += " -fno-common"
+        }
+        let syslibroot = platform.isysroot()
+        cflags += " -isysroot \(syslibroot)"
+        if platform == .maccatalyst {
+            cflags += " -iframework \(syslibroot)/System/iOSSupport/System/Library/Frameworks"
+        }
+        if platform == .tvos || platform == .tvsimulator {
+            cflags += " -DHAVE_FORK=0"
+        }
+        return cflags
+    }
+
+    func ldFlags(platform: PlatformType, arch: ArchType) -> String {
+        cFlags(platform: platform, arch: arch)
+    }
+
+    func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        [
+            "--prefix=\(thinDir(platform: platform, arch: arch).path)",
+        ]
+    }
+
+    func createXCFramework() throws {
         for framework in frameworks() {
-            var arguments = ""
+            var arguments = ["-create-xcframework"]
             let XCFrameworkFile = URL.currentDirectory + ["../Sources", framework + ".xcframework"]
             if FileManager.default.fileExists(atPath: XCFrameworkFile.path) {
-                try? FileManager.default.removeItem(at: XCFrameworkFile)
+                try FileManager.default.removeItem(at: XCFrameworkFile)
             }
             for platform in BaseBuild.platforms {
-                arguments += " -framework \(createFramework(framework: framework, platform: platform))"
+                arguments.append("-framework")
+                arguments.append(try createFramework(framework: framework, platform: platform))
             }
-            Utility.shell("xcodebuild -create-xcframework\(arguments) -output \(XCFrameworkFile.path)")
+            arguments.append("-output")
+            arguments.append(XCFrameworkFile.path)
+            try Utility.launch(path: "/usr/bin/xcodebuild", arguments: arguments)
         }
     }
 
-    private func createFramework(framework: String, platform: PlatformType) -> String {
+    private func createFramework(framework: String, platform: PlatformType) throws -> String {
         let frameworkDir = URL.currentDirectory + [library, platform.rawValue, "\(framework).framework"]
-        try? FileManager.default.removeItem(at: frameworkDir)
-        try? FileManager.default.createDirectory(at: frameworkDir, withIntermediateDirectories: true, attributes: nil)
-        var command = "lipo -create"
+        try FileManager.default.removeItem(at: frameworkDir)
+        try FileManager.default.createDirectory(at: frameworkDir, withIntermediateDirectories: true, attributes: nil)
+        var arguments = ["-create"]
         for arch in architectures(platform) {
             let prefix = thinDir(platform: platform, arch: arch)
-            command += " "
-            command += (prefix + ["lib", "\(framework).a"]).path
+            arguments.append((prefix + ["lib", "\(framework).a"]).path)
             var headerURL = prefix + "include" + framework
             if !FileManager.default.fileExists(atPath: headerURL.path) {
                 headerURL = prefix + "include"
             }
-            try? FileManager.default.copyItem(at: headerURL, to: frameworkDir + "Headers")
+            try FileManager.default.copyItem(at: headerURL, to: frameworkDir + "Headers")
         }
-        command += " -output "
-        command += (frameworkDir + framework).path
-        Utility.shell(command)
-        try? FileManager.default.createDirectory(at: frameworkDir + "Modules", withIntermediateDirectories: true, attributes: nil)
+        arguments.append("-output")
+        arguments.append((frameworkDir + framework).path)
+        try Utility.launch(path: "/usr/bin/lipo", arguments: arguments)
+        try FileManager.default.createDirectory(at: frameworkDir + "Modules", withIntermediateDirectories: true, attributes: nil)
         var modulemap = """
         framework module \(framework) [system] {
             umbrella "."
@@ -156,7 +214,7 @@ private class BaseBuild {
         []
     }
 
-    func createPlist(path: String, name: String, minVersion: String, platform: String) {
+    private func createPlist(path: String, name: String, minVersion: String, platform: String) {
         let identifier = "com.kintan.ksplayer." + name
         let content = """
         <?xml version="1.0" encoding="UTF-8"?>
@@ -201,101 +259,102 @@ private class BuildFFMPEG: BaseBuild {
     private let isDebug: Bool
     init(arguments: [String]) {
         isDebug = arguments.firstIndex(of: "enable-debug") != nil
-        super.init(library: "FFmpeg")
+        super.init(library: "FFmpeg", directoryName: ffmpegFile)
     }
 
-    override func innerBuid(platform: PlatformType, arch: ArchType, cflags: String, buildDir: URL) {
-        var ffmpegcflags = ffmpegConfiguers
+    override func build(platform: PlatformType, arch: ArchType) throws {
+        try super.build(platform: platform, arch: arch)
+        let prefix = thinDir(platform: platform, arch: arch)
+        let buildDir = scratch(platform: platform, arch: arch)
+        let lldbFile = URL.currentDirectory + "LLDBInitFile"
+        if let data = FileManager.default.contents(atPath: lldbFile.path), var str = String(data: data, encoding: .utf8) {
+            str.append("settings \(str.count == 0 ? "set" : "append") target.source-map \((buildDir + "src").path) \(directoryURL.path)\n")
+            try str.write(toFile: lldbFile.path, atomically: true, encoding: .utf8)
+        }
+        if platform == .macos, arch.executable() {
+            try replaceBin(prefix: prefix, item: "ffmpeg")
+            try replaceBin(prefix: prefix, item: "ffplay")
+            try replaceBin(prefix: prefix, item: "ffprobe")
+        }
+    }
+
+    override func pkgConfigPath(platform: PlatformType, arch: ArchType) -> String {
+        var pkgConfigPath = super.pkgConfigPath(platform: platform, arch: arch)
+        let opensslPath = URL.currentDirectory + ["SSL", platform.rawValue, "thin", arch.rawValue]
+        if FileManager.default.fileExists(atPath: opensslPath.path) {
+            pkgConfigPath += "\(opensslPath.path)/lib/pkgconfig:"
+        }
+        let srtPath = URL.currentDirectory + ["SRT", platform.rawValue, "thin", arch.rawValue]
+        if FileManager.default.fileExists(atPath: srtPath.path) {
+            pkgConfigPath += "\(srtPath.path)/lib/pkgconfig:"
+        }
+        return pkgConfigPath
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        var arguments = super.arguments(platform: platform, arch: arch)
+        arguments += ffmpegConfiguers
+        arguments.append("--target-os=darwin")
+        arguments.append("--arch=\(arch.arch())")
+        arguments.append(arch.cpu())
         if isDebug {
-            ffmpegcflags.append("--enable-debug")
-            ffmpegcflags.append("--disable-stripping")
-            ffmpegcflags.append("--disable-optimizations")
+            arguments.append("--enable-debug")
+            arguments.append("--disable-stripping")
+            arguments.append("--disable-optimizations")
         } else {
-            ffmpegcflags.append("--disable-debug")
-            ffmpegcflags.append("--enable-stripping")
-            ffmpegcflags.append("--enable-optimizations")
+            arguments.append("--disable-debug")
+            arguments.append("--enable-stripping")
+            arguments.append("--enable-optimizations")
         }
         /**
          aacpsdsp.o), building for Mac Catalyst, but linking in object file built for
          x86_64 binaries are built without ASM support, since ASM for x86_64 is actually x86 and that confuses `xcodebuild -create-xcframework` https://stackoverflow.com/questions/58796267/building-for-macos-but-linking-in-object-file-built-for-free-standing/59103419#59103419
          */
         if platform == .maccatalyst || arch == .x86_64 {
-            ffmpegcflags.append("--disable-neon")
-            ffmpegcflags.append("--disable-asm")
+            arguments.append("--disable-neon")
+            arguments.append("--disable-asm")
         } else {
-            ffmpegcflags.append("--enable-neon")
-            ffmpegcflags.append("--enable-asm")
+            arguments.append("--enable-neon")
+            arguments.append("--enable-asm")
         }
         if platform == .macos, arch.executable() {
-            ffmpegcflags.append("--enable-ffplay")
-            ffmpegcflags.append("--enable-sdl2")
-            ffmpegcflags.append("--enable-encoder=aac")
-            ffmpegcflags.append("--enable-encoder=movtext")
-            ffmpegcflags.append("--enable-encoder=mpeg4")
-            ffmpegcflags.append("--enable-decoder=rawvideo")
-            ffmpegcflags.append("--enable-filter=color")
-            ffmpegcflags.append("--enable-filter=lut")
-            ffmpegcflags.append("--enable-filter=negate")
-            ffmpegcflags.append("--enable-filter=testsrc")
-            ffmpegcflags.append("--disable-avdevice")
-//            ffmpegcflags.append("--enable-avdevice")
-//            ffmpegcflags.append("--enable-indev=lavfi")
+            arguments.append("--enable-ffplay")
+            arguments.append("--enable-sdl2")
+            arguments.append("--enable-encoder=aac")
+            arguments.append("--enable-encoder=movtext")
+            arguments.append("--enable-encoder=mpeg4")
+            arguments.append("--enable-decoder=rawvideo")
+            arguments.append("--enable-filter=color")
+            arguments.append("--enable-filter=lut")
+            arguments.append("--enable-filter=negate")
+            arguments.append("--enable-filter=testsrc")
+            arguments.append("--disable-avdevice")
+            //            arguments.append("--enable-avdevice")
+            //            arguments.append("--enable-indev=lavfi")
         } else {
-            ffmpegcflags.append("--disable-avdevice")
-            ffmpegcflags.append("--disable-programs")
+            arguments.append("--disable-avdevice")
+            arguments.append("--disable-programs")
         }
-//        if platform == .isimulator || platform == .tvsimulator {
-//            ffmpegcflags.append("--assert-level=1")
-//        }
-        var cflags = cflags
-        var ldflags = "-arch \(arch.rawValue) "
-        if platform == .maccatalyst {
-            let syslibroot = platform.isysroot()
-            cflags += " -isysroot \(syslibroot) -iframework \(syslibroot)/System/iOSSupport/System/Library/Frameworks"
-            ldflags = cflags
-        }
+        //        if platform == .isimulator || platform == .tvsimulator {
+        //            arguments.append("--assert-level=1")
+        //        }
+
         let opensslPath = URL.currentDirectory + ["SSL", platform.rawValue, "thin", arch.rawValue]
-        var pkgConfigPath = ""
         if FileManager.default.fileExists(atPath: opensslPath.path) {
-            pkgConfigPath += "\(opensslPath.path)/lib/pkgconfig:"
-            ffmpegcflags.append("--enable-openssl")
+            arguments.append("--enable-openssl")
         }
         let srtPath = URL.currentDirectory + ["SRT", platform.rawValue, "thin", arch.rawValue]
         if FileManager.default.fileExists(atPath: srtPath.path) {
-            pkgConfigPath += "\(srtPath.path)/lib/pkgconfig:"
-            ffmpegcflags.append("--enable-libsrt")
-            ffmpegcflags.append("--enable-protocol=libsrt")
+            arguments.append("--enable-libsrt")
+            arguments.append("--enable-protocol=libsrt")
         }
-        let prefix = thinDir(platform: platform, arch: arch)
-        var args = ["set -o noglob &&",
-                    (URL.currentDirectory + [ffmpegFile, "configure"]).path,
-                    "--target-os=darwin",
-                    "--arch=\(arch.arch())",
-                    platform.cpu(arch: arch),
-                    "--cc='xcrun -sdk \(platform.sdk().lowercased()) clang'",
-                    "--extra-cflags='\(cflags)'",
-                    "--extra-ldflags='\(ldflags)'",
-                    "--prefix=\(prefix.path)"]
-        args.append(contentsOf: ffmpegcflags)
-        let environment = ["PKG_CONFIG_PATH": pkgConfigPath]
-        Utility.shell(args.joined(separator: " "), currentDirectoryURL: buildDir, environment: environment)
-        Utility.shell("make -j8 install\(arch == .x86_64 ? "" : " GASPP_FIX_XCODE5=1") >>\(buildDir.path).log", currentDirectoryURL: buildDir)
-        let lldbFile = URL.currentDirectory + "LLDBInitFile"
-        if let data = FileManager.default.contents(atPath: lldbFile.path), var str = String(data: data, encoding: .utf8) {
-            str.append("settings \(str.count == 0 ? "set" : "append") target.source-map \((buildDir + "src").path) \((URL.currentDirectory + ffmpegFile).path)\n")
-            try? str.write(toFile: lldbFile.path, atomically: true, encoding: .utf8)
-        }
-        if platform == .macos, arch.executable() {
-            replaceBin(prefix: prefix, item: "ffmpeg")
-            replaceBin(prefix: prefix, item: "ffplay")
-            replaceBin(prefix: prefix, item: "ffprobe")
-        }
+        return arguments
     }
 
-    private func replaceBin(prefix: URL, item: String) {
+    private func replaceBin(prefix: URL, item: String) throws {
         if FileManager.default.fileExists(atPath: (prefix + ["bin", item]).path) {
-            try? FileManager.default.removeItem(at: URL(fileURLWithPath: "/usr/local/bin/\(item)"))
-            try? FileManager.default.copyItem(at: prefix + ["bin", item], to: URL(fileURLWithPath: "/usr/local/bin/\(item)"))
+            try FileManager.default.removeItem(at: URL(fileURLWithPath: "/usr/local/bin/\(item)"))
+            try FileManager.default.copyItem(at: prefix + ["bin", item], to: URL(fileURLWithPath: "/usr/local/bin/\(item)"))
         }
     }
 
@@ -303,26 +362,24 @@ private class BuildFFMPEG: BaseBuild {
         ["Libavcodec", "Libavformat", "Libavutil", "Libswresample", "Libswscale", "Libavfilter"]
     }
 
-    override func createXCFramework() {
-        super.createXCFramework()
+//    override func createXCFramework() throws {
+//        try super.createXCFramework()
 //        makeFFmpegSourece()
-    }
+//    }
 
-    private func makeFFmpegSourece() {
+    private func makeFFmpegSourece() throws {
         guard let platform = BaseBuild.platforms.first, let arch = platform.architectures().first else {
             return
         }
         let target = URL.currentDirectory + ["../Sources", "FFmpeg"]
-        try? FileManager.default.removeItem(at: target)
-        try? FileManager.default.createDirectory(at: target, withIntermediateDirectories: true, attributes: nil)
+        try FileManager.default.removeItem(at: target)
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true, attributes: nil)
         let thin = thinDir(platform: platform, arch: arch)
-        try? FileManager.default.copyItem(at: thin + "include", to: target + "include")
+        try FileManager.default.copyItem(at: thin + "include", to: target + "include")
         let scratch = scratch(platform: platform, arch: arch)
-        try? FileManager.default.createDirectory(at: target + "include", withIntermediateDirectories: true, attributes: nil)
-        try? FileManager.default.copyItem(at: scratch + "config.h", to: target + "include" + "config.h")
-        guard let fileNames = try? FileManager.default.contentsOfDirectory(atPath: scratch.path) else {
-            return
-        }
+        try FileManager.default.createDirectory(at: target + "include", withIntermediateDirectories: true, attributes: nil)
+        try FileManager.default.copyItem(at: scratch + "config.h", to: target + "include" + "config.h")
+        let fileNames = try FileManager.default.contentsOfDirectory(atPath: scratch.path)
         for fileName in fileNames where fileName.hasPrefix("lib") {
             var url = scratch + fileName
             var isDir: ObjCBool = false
@@ -334,22 +391,22 @@ private class BuildFFMPEG: BaseBuild {
                         if subpath.hasSuffix(".c") {
                             let srcURL = url + subpath
                             let dstURL = target + "include" + fileName + subpath
-                            try? FileManager.default.copyItem(at: srcURL, to: dstURL)
+                            try FileManager.default.copyItem(at: srcURL, to: dstURL)
                         } else if subpath.hasSuffix(".o") {
                             let subpath = subpath.replacingOccurrences(of: ".o", with: ".c")
                             let srcURL = scratch + "src" + fileName + subpath
                             let dstURL = dstDir + subpath
                             let dstURLDir = dstURL.deletingLastPathComponent()
                             if !FileManager.default.fileExists(atPath: dstURLDir.path) {
-                                try? FileManager.default.createDirectory(at: dstURLDir, withIntermediateDirectories: true, attributes: nil)
+                                try FileManager.default.createDirectory(at: dstURLDir, withIntermediateDirectories: true, attributes: nil)
                             }
-                            try? FileManager.default.copyItem(at: srcURL, to: dstURL)
+                            try FileManager.default.copyItem(at: srcURL, to: dstURL)
                         }
                     }
                 }
                 url = scratch + "src" + fileName
                 // copy .h
-                try? FileManager.default.copyItem(at: scratch + "src" + "compat", to: target + "compat")
+                try FileManager.default.copyItem(at: scratch + "src" + "compat", to: target + "compat")
                 if let subpaths = FileManager.default.enumerator(atPath: url.path) {
                     let dstDir = target + "include" + fileName
                     while let subpath = subpaths.nextObject() as? String {
@@ -358,9 +415,9 @@ private class BuildFFMPEG: BaseBuild {
                             let dstURL = dstDir + subpath
                             let dstURLDir = dstURL.deletingLastPathComponent()
                             if !FileManager.default.fileExists(atPath: dstURLDir.path) {
-                                try? FileManager.default.createDirectory(at: dstURLDir, withIntermediateDirectories: true, attributes: nil)
+                                try FileManager.default.createDirectory(at: dstURLDir, withIntermediateDirectories: true, attributes: nil)
                             }
-                            try? FileManager.default.copyItem(at: srcURL, to: dstURL)
+                            try FileManager.default.copyItem(at: srcURL, to: dstURL)
                         }
                     }
                 }
@@ -368,24 +425,24 @@ private class BuildFFMPEG: BaseBuild {
         }
     }
 
-    override func buildALL() {
-        prepareAsm()
-        if !FileManager.default.fileExists(atPath: (URL.currentDirectory + ffmpegFile).path) {
+    override func buildALL() throws {
+        try prepareAsm()
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
             Utility.shell("curl http://www.ffmpeg.org/releases/\(ffmpegFile).tar.bz2 | tar xj")
         }
         let lldbFile = URL.currentDirectory + "LLDBInitFile"
-        try? FileManager.default.removeItem(at: lldbFile)
+        try FileManager.default.removeItem(at: lldbFile)
         FileManager.default.createFile(atPath: lldbFile.path, contents: nil, attributes: nil)
-        let path = URL.currentDirectory + ffmpegFile + "libavcodec/videotoolbox.c"
+        let path = directoryURL + "libavcodec/videotoolbox.c"
         if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
             str = str.replacingOccurrences(of: "kCVPixelBufferOpenGLESCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
             str = str.replacingOccurrences(of: "kCVPixelBufferIOSurfaceOpenGLTextureCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
-            try? str.write(toFile: path.path, atomically: true, encoding: .utf8)
+            try str.write(toFile: path.path, atomically: true, encoding: .utf8)
         }
-        super.buildALL()
+        try super.buildALL()
     }
 
-    private func prepareAsm() {
+    private func prepareAsm() throws {
         if Utility.shell("which nasm") == nil {
             Utility.shell("brew install nasm")
         }
@@ -488,73 +545,17 @@ private class BuildFFMPEG: BaseBuild {
     ]
 }
 
-private class BuildSRT: BaseBuild {
-    private let version = "1.5.0"
-    init() {
-        super.init(library: "SRT")
-    }
-
-    override func buildALL() {
-        if Utility.shell("which cmake") == nil {
-            Utility.shell("brew install cmake")
-        }
-        if Utility.shell("which wget") == nil {
-            Utility.shell("brew install wget")
-        }
-        if !FileManager.default.fileExists(atPath: (URL.currentDirectory + "srt-\(version)").path) {
-            Utility.shell("curl -L https://github.com/Haivision/srt/archive/refs/tags/v\(version).tar.gz | tar xj")
-        }
-        super.buildALL()
-    }
-
-    override func innerBuid(platform: PlatformType, arch: ArchType, cflags _: String, buildDir: URL) {
-        let opensslPath = URL.currentDirectory + ["SSL", platform.rawValue, "thin", arch.rawValue]
-        let directoryURL = URL.currentDirectory + "srt-\(version)"
-        let cmakeDir = directoryURL + "\(platform)-\(arch)"
-
-        if !FileManager.default.fileExists(atPath: cmakeDir.path) {
-            try? FileManager.default.createDirectory(at: cmakeDir, withIntermediateDirectories: false, attributes: nil)
-        }
-
-        let srtPlatform = toSRTPlatform(platform: platform)
-
-        let pkgConfigPath = "\(opensslPath.path)/lib/pkgconfig:"
-        let environment = ["PKG_CONFIG_PATH": pkgConfigPath]
-        let thinDirPath = thinDir(platform: platform, arch: arch).path
-        let command = "cmake .. -DCMAKE_PREFIX_PATH=\(thinDirPath) -DCMAKE_INSTALL_PREFIX=\(thinDirPath) -DCMAKE_TOOLCHAIN_FILE=scripts/iOS.cmake -DIOS_ARCH=\(arch) -DIOS_PLATFORM=\(srtPlatform)  -DCMAKE_IOS_DEVELOPER_ROOT=\(platform.crossTop()) -D_CMAKE_IOS_SDK_ROOT=\(platform.crossSDK())"
-        Utility.shell(command, currentDirectoryURL: cmakeDir, environment: environment)
-        Utility.shell("make >>\(buildDir.path).log && make install >>\(buildDir.path).log ", currentDirectoryURL: cmakeDir)
-    }
-
-    override func frameworks() -> [String] {
-        ["Libsrt"]
-    }
-
-    private func toSRTPlatform(platform: PlatformType) -> String {
-        switch platform {
-        case .ios:
-            return "OS"
-        case .isimulator:
-            return "SIMULATOR64"
-        default:
-            let message = "Platform not supported: \(platform)"
-            print(message)
-            return message
-        }
-    }
-}
-
 private class BuildOpenSSL: BaseBuild {
     private let sslFile = "openssl-3.0.7"
     init() {
-        super.init(library: "SSL")
+        super.init(library: "SSL", directoryName: sslFile)
     }
 
-    override func buildALL() {
-        if !FileManager.default.fileExists(atPath: (URL.currentDirectory + sslFile).path) {
+    override func buildALL() throws {
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
             Utility.shell("curl https://www.openssl.org/source/\(sslFile).tar.gz | tar xj")
         }
-        super.buildALL()
+        try super.buildALL()
     }
 
     override func architectures(_ platform: PlatformType) -> [ArchType] {
@@ -566,23 +567,10 @@ private class BuildOpenSSL: BaseBuild {
         }
     }
 
-    override func innerBuid(platform: PlatformType, arch: ArchType, cflags: String, buildDir: URL) {
-        let directoryURL = URL.currentDirectory + sslFile
-        var ccFlags = "/usr/bin/clang " + cflags
-        if platform == .macos || platform == .maccatalyst {
-            ccFlags += " -fno-common"
-        } else {
-            ccFlags += " -isysroot \(platform.isysroot())"
-        }
-        if platform == .tvos || platform == .tvsimulator {
-            ccFlags += " -DHAVE_FORK=0"
-        }
-        let target = platform.target(arch: arch)
-        let environment = ["LC_CTYPE": "C", "CROSS_TOP": platform.crossTop(), "CROSS_SDK": platform.crossSDK(), "CC": ccFlags]
-        let command = "./Configure " + target +
-            " no-async no-shared no-dso no-engine no-tests --prefix=\(thinDir(platform: platform, arch: arch).path) --openssldir=\(buildDir.path) >>\(buildDir.path).log"
-        Utility.shell(command, currentDirectoryURL: directoryURL, environment: environment)
-        Utility.shell("make clean >>\(buildDir.path).log && make >>\(buildDir.path).log && make -j8 install_sw >>\(buildDir.path).log ", currentDirectoryURL: directoryURL, environment: environment)
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        super.arguments(platform: platform, arch: arch) +
+            [platform.target(arch: arch),
+             "no-async", "no-shared", "no-dso", "no-engine", "no-tests"]
     }
 
     override func frameworks() -> [String] {
@@ -591,31 +579,15 @@ private class BuildOpenSSL: BaseBuild {
 }
 
 private class BuildBoringSSL: BaseBuild {
-    private let sslFile = "boringssl"
     init() {
-        super.init(library: "SSL")
+        super.init(library: "SSL", directoryName: "boringssl")
     }
 
-    override func buildALL() {
-        if !FileManager.default.fileExists(atPath: (URL.currentDirectory + sslFile).path) {
+    override func buildALL() throws {
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
             Utility.shell("git clone https://github.com/google/boringssl.git")
         }
-        super.buildALL()
-    }
-
-    override func innerBuid(platform: PlatformType, arch: ArchType, cflags: String, buildDir: URL) {
-        var command = "cmake -DCMAKE_OSX_SYSROOT=\(platform.sdk().lowercased()) -DCMAKE_OSX_ARCHITECTURES=\(arch.rawValue)"
-        if platform == .maccatalyst {
-            command = "cmake -DCMAKE_C_FLAGS='\(cflags)'"
-        }
-        command += " -GNinja ../../../../boringssl"
-        Utility.shell(command, currentDirectoryURL: buildDir)
-        Utility.shell("ninja >>\(buildDir.path).log", currentDirectoryURL: buildDir)
-        let thin = thinDir(platform: platform, arch: arch)
-        try? FileManager.default.createDirectory(at: thin + "lib", withIntermediateDirectories: true, attributes: nil)
-        try? FileManager.default.copyItem(at: URL.currentDirectory + [sslFile, "include"], to: thin + "include")
-        try? FileManager.default.copyItem(at: buildDir + ["ssl", "libssl.a"], to: thin + ["lib", "libssl.a"])
-        try? FileManager.default.copyItem(at: buildDir + ["crypto", "libcrypto.a"], to: thin + ["lib", "libcrypto.a"])
+        try super.buildALL()
     }
 
     override func frameworks() -> [String] {
@@ -623,86 +595,86 @@ private class BuildBoringSSL: BaseBuild {
     }
 }
 
+private class BuildSRT: BaseBuild {
+    private let version = "1.5.1"
+    init() {
+        super.init(library: "SRT", directoryName: "srt-\(version)")
+    }
+
+    override func buildALL() throws {
+        if Utility.shell("which cmake") == nil {
+            Utility.shell("brew install cmake")
+        }
+        if Utility.shell("which wget") == nil {
+            Utility.shell("brew install wget")
+        }
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
+            Utility.shell("curl -L https://github.com/Haivision/srt/archive/refs/tags/v\(version).tar.gz | tar xj")
+        }
+        try super.buildALL()
+    }
+
+    override func pkgConfigPath(platform: PlatformType, arch: ArchType) -> String {
+        var pkgConfigPath = super.pkgConfigPath(platform: platform, arch: arch)
+        let opensslPath = URL.currentDirectory + ["SSL", platform.rawValue, "thin", arch.rawValue]
+        if FileManager.default.fileExists(atPath: opensslPath.path) {
+            pkgConfigPath += "\(opensslPath.path)/lib/pkgconfig:"
+        }
+        return pkgConfigPath
+    }
+
+    override func frameworks() -> [String] {
+        ["Libsrt"]
+    }
+}
+
 private class BuildASS: BaseBuild {
     private let version = "0.17.0"
-    private let assFile: String
-
     init() {
-        assFile = "libass-\(version)"
-        super.init(library: "ASS")
+        super.init(library: "ASS", directoryName: "libass-\(version)")
     }
 
-    override func buildALL() {
-        if !FileManager.default.fileExists(atPath: (URL.currentDirectory + assFile).path) {
+    override func buildALL() throws {
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
             Utility.shell("curl https://codeload.github.com/libass/libass/tar.gz/refs/tags/\(version) | tar xj")
         }
-        super.buildALL()
+        try super.buildALL()
     }
 
-    override func innerBuid(platform: PlatformType, arch: ArchType, cflags _: String, buildDir: URL) {
-        let directoryURL = URL.currentDirectory + assFile
-        let prefix = thinDir(platform: platform, arch: arch)
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         let asmOptions = arch == .x86_64 ? "--disable-asm" : "--enable-asm"
-        let args = [
-            "--prefix=\(buildDir.path)",
-            "--libdir=\(prefix.path)",
-            "--with-sysroot=\(platform.isysroot())",
-            asmOptions,
-            "--enable-static",
-            "--disable-shared",
-//            "--with-pic",
-//            "--disable-libtool-lock",
-//            "--disable-require-system-font-provider",
-//            "--disable-fast-install",
-//            "--disable-test",
-//            "--disable-profile",
-//            "--disable-coretext",
-        ]
-        Utility.shell("./autogen.sh " + args.joined(separator: " "), currentDirectoryURL: directoryURL)
-        Utility.shell("./configure " + args.joined(separator: " "), currentDirectoryURL: directoryURL)
-        Utility.shell("make -j8 && make install", currentDirectoryURL: directoryURL)
+        return super.arguments(platform: platform, arch: arch) +
+            ["--enable-static",
+             "--disable-shared",
+             asmOptions,
+             "--with-pic",
+             "--disable-libtool-lock",
+             "--disable-require-system-font-provider",
+             "--disable-fast-install",
+             "--disable-test",
+             "--disable-profile",
+             "--disable-coretext"]
     }
 }
 
 private class BuildMPV: BaseBuild {
     private let version = "0.35.0"
-    private let mpvFile: String
-
     init() {
-        mpvFile = "mpv-\(version)"
-        super.init(library: "MPV")
+        super.init(library: "MPV", directoryName: "mpv-\(version)")
     }
 
-    override func buildALL() {
+    override func buildALL() throws {
         if Utility.shell("which meson") == nil {
             Utility.shell("brew install meson")
         }
-        if !FileManager.default.fileExists(atPath: (URL.currentDirectory + mpvFile).path) {
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
             Utility.shell("curl https://github.com/mpv-player/mpv/archive/refs/tags/v\(version) | tar xj")
         }
-        super.buildALL()
-    }
-
-    override func innerBuid(platform: PlatformType, arch: ArchType, cflags _: String, buildDir _: URL) {
-        let opensslPath = URL.currentDirectory + ["SSL", platform.rawValue, "thin", arch.rawValue]
-        var pkgConfigPath = ""
-        if FileManager.default.fileExists(atPath: opensslPath.path) {
-            pkgConfigPath += "\(opensslPath.path)/lib/pkgconfig:"
-        }
-        let ffmpegPath = URL.currentDirectory + ["FFmpeg", platform.rawValue, "thin", arch.rawValue]
-        if FileManager.default.fileExists(atPath: ffmpegPath.path) {
-            pkgConfigPath += "\(ffmpegPath.path)/lib/pkgconfig:"
-        }
-        let environment = ["PKG_CONFIG_PATH": pkgConfigPath]
-        let directoryURL = URL.currentDirectory + mpvFile
-        Utility.shell("meson setup build -Dprefer_static=true -Dbuildtype=release", currentDirectoryURL: directoryURL, environment: environment)
-        Utility.shell("meson compile -C build", currentDirectoryURL: directoryURL, environment: environment)
-        Utility.shell("meson install -C build", currentDirectoryURL: directoryURL, environment: environment)
+        try super.buildALL()
     }
 }
 
 private enum PlatformType: String, CaseIterable {
-    private static let xcodePath = Utility.shell("xcode-select -p", isOutput: true) ?? ""
     case ios, isimulator, tvos, tvsimulator, macos, maccatalyst
     var minVersion: String {
         switch self {
@@ -762,39 +734,12 @@ private enum PlatformType: String, CaseIterable {
         case .macos:
             return "MacOSX"
         case .maccatalyst:
-            return "iPhoneOS"
-        }
-    }
-
-    func crossSDK() -> String {
-        if self == .maccatalyst {
-            return PlatformType.macos.crossSDK()
-        } else {
-            return sdk() + ".sdk"
-        }
-    }
-
-    func crossTop() -> String {
-        if self == .maccatalyst {
-            return PlatformType.macos.crossTop()
-        } else {
-            return "\(PlatformType.xcodePath)/Platforms/\(sdk()).platform/Developer"
+            return "MacOSX"
         }
     }
 
     func isysroot() -> String {
-        crossTop() + "/SDKs/" + crossSDK()
-    }
-
-    func cpu(arch: ArchType) -> String {
-        switch arch {
-        case .arm64:
-            return "--cpu=armv8"
-        case .x86_64:
-            return "--cpu=x86_64"
-        case .arm64e:
-            return "--cpu=armv8.3-a"
-        }
+        try! Utility.launch(path: "/usr/bin/xcrun", arguments: ["--sdk", sdk().lowercased(), "--show-sdk-path"], isOutput: true)
     }
 
     func target(arch: ArchType) -> String {
@@ -855,61 +800,56 @@ enum ArchType: String, CaseIterable {
             return "x86_64"
         }
     }
+
+    func cpu() -> String {
+        switch self {
+        case .arm64:
+            return "--cpu=armv8"
+        case .x86_64:
+            return "--cpu=x86_64"
+        case .arm64e:
+            return "--cpu=armv8.3-a"
+        }
+    }
 }
 
 enum Utility {
     @discardableResult
-    static func shell(_ command: String, isOutput: Bool = false, currentDirectoryURL: URL? = nil, environment: [String: String] = [:]) -> String? {
-        #if os(macOS)
-        let task = Process()
+    static func shell(_ command: String, isOutput _: Bool = false, currentDirectoryURL: URL? = nil, environment: [String: String] = [:]) -> String? {
         var environment = environment
         environment["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        return try? launch(path: "/bin/zsh", arguments: ["-c", command], currentDirectoryURL: currentDirectoryURL, environment: environment)
+    }
+
+    @discardableResult
+    static func launch(path: String, arguments: [String], isOutput: Bool = false, currentDirectoryURL: URL? = nil, environment: [String: String] = [:]) throws -> String {
+        #if os(macOS)
+        let task = Process()
         task.environment = environment
         task.currentDirectoryURL = currentDirectoryURL
         let pipe = Pipe()
-//        task.standardError = pipe
+        //        task.standardError = pipe
         if isOutput {
             task.standardOutput = pipe
         }
-        task.arguments = ["-c", command]
-        task.launchPath = "/bin/zsh"
+        task.arguments = arguments
+        task.executableURL = URL(fileURLWithPath: path)
         task.launch()
         task.waitUntilExit()
         if task.terminationStatus == 0 {
             if isOutput {
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .newlines)
+                return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .newlines) ?? ""
             } else {
                 return ""
             }
         } else {
-            return nil
+            throw NSError(domain: "fail", code: Int(task.terminationStatus))
         }
         #else
-        return nil
+        return ""
         #endif
     }
-
-//    @discardableResult
-//    static func exec(_ args: [String], currentDirectoryURL: URL? = nil) -> String? {
-//        let task = Process()
-//        task.environment = ["PATH": "/bin:/usr/bin:/usr/local/bin"]
-//        if #available(OSX 10.13, *) {
-//            task.currentDirectoryURL = currentDirectoryURL
-//        }
-//        let pipe = Pipe()
-//        task.standardOutput = pipe
-//        task.launchPath = "/usr/bin/env"
-//        task.arguments = args
-//        task.launch()
-//        task.waitUntilExit()
-//        if task.terminationStatus == 0 {
-//            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-//            return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .newlines) ?? ""
-//        } else {
-//            return nil
-//        }
-//    }
 }
 
 extension URL {

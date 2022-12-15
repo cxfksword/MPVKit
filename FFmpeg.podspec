@@ -4,7 +4,7 @@ Pod::Spec.new do |s|
     s.summary          = 'FFmpeg'
 
     s.description      = <<-DESC
-    OpenSSL
+    FFmpeg
     DESC
 
     s.homepage         = 'https://github.com/kingslay/KSPlayer'
