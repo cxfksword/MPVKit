@@ -1,17 +1,15 @@
 import Foundation
 // import PackagePlugin
-//
-// @main struct BuildFFmpeg: CommandPlugin {
-@main enum BuildFFmpeg {
-    static func main() {
-        do {
-            try performCommand(arguments: Array(CommandLine.arguments.dropFirst()))
-        } catch {
-            print(error.localizedDescription)
-            exit(0)
-        }
-    }
 
+do {
+    try BuildFFmpeg.performCommand(arguments: Array(CommandLine.arguments.dropFirst()))
+} catch {
+    print(error.localizedDescription)
+    exit(0)
+}
+
+enum BuildFFmpeg {
+    // @main struct BuildFFmpeg: CommandPlugin {
 //    func performCommand(context _: PluginContext, arguments: [String]) throws {
 //        performCommand(arguments: arguments)
 //    }
@@ -26,7 +24,7 @@ import Foundation
 
         let path = URL.currentDirectory + "Script"
         if !FileManager.default.fileExists(atPath: path.path) {
-            try FileManager.default.createDirectory(at: path, withIntermediateDirectories: false, attributes: nil)
+            try? FileManager.default.createDirectory(at: path, withIntermediateDirectories: false, attributes: nil)
         }
         FileManager.default.changeCurrentDirectoryPath(path.path)
         BaseBuild.platforms = arguments.compactMap { argument in
@@ -40,10 +38,6 @@ import Foundation
         if BaseBuild.platforms.isEmpty {
             BaseBuild.platforms = PlatformType.allCases
         }
-        if arguments.firstIndex(of: "enable-mpv") != nil {
-            try BuildMPV().buildALL()
-            return
-        }
         if arguments.firstIndex(of: "enable-openssl") != nil {
             try BuildOpenSSL().buildALL()
 //            try BuildBoringSSL().buildALL()
@@ -54,9 +48,16 @@ import Foundation
         if arguments.firstIndex(of: "enable-libsrt") != nil {
             try BuildSRT().buildALL()
         }
+
         if arguments.firstIndex(of: "enable-libass") != nil {
+            try BuildFribidi().buildALL()
             try BuildASS().buildALL()
         }
+
+        if arguments.firstIndex(of: "enable-mpv") != nil {
+            try BuildMPV().buildALL()
+        }
+
         try BuildFFMPEG(arguments: arguments).buildALL()
     }
 }
@@ -86,22 +87,32 @@ private class BaseBuild {
 
     func build(platform: PlatformType, arch: ArchType) throws {
         let url = scratch(platform: platform, arch: arch)
-        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
         let environ = environment(platform: platform, arch: arch)
-        let configure = directoryURL + "Configure"
         let CMakeFiles = directoryURL + "CMakeFiles"
-        if FileManager.default.fileExists(atPath: configure.path) {
-            try Utility.launch(path: configure.path, arguments: arguments(platform: platform, arch: arch), currentDirectoryURL: url, environment: environ)
-            try Utility.launch(path: "/usr/bin/make", arguments: ["clean", "-s"], currentDirectoryURL: url)
+        let autogen = directoryURL + "autogen.sh"
+        let configure = directoryURL + "Configure"
+        if FileManager.default.fileExists(atPath: autogen.path) {
+            try Utility.launch(path: autogen.path, arguments: arguments(platform: platform, arch: arch), currentDirectoryURL: url, environment: environ)
         } else if FileManager.default.fileExists(atPath: CMakeFiles.path) {
             try Utility.launch(path: "/usr/local/bin/cmake", arguments: [directoryURL.path], currentDirectoryURL: url, environment: environ)
+        } else if FileManager.default.fileExists(atPath: configure.path) {
+            try Utility.launch(path: configure.path, arguments: arguments(platform: platform, arch: arch), currentDirectoryURL: url, environment: environ)
+            try Utility.launch(path: "/usr/bin/make", arguments: ["clean", "-s"], currentDirectoryURL: url)
+            try Utility.launch(path: "/usr/bin/make", arguments: ["-s"], currentDirectoryURL: url, environment: environ)
         }
-        try Utility.launch(path: "/usr/bin/make", arguments: ["-s"], currentDirectoryURL: url, environment: environ)
         try Utility.launch(path: "/usr/bin/make", arguments: ["-j8", "install", "-s"], currentDirectoryURL: url, environment: environ)
     }
 
-    func pkgConfigPath(platform _: PlatformType, arch _: ArchType) -> String {
-        ""
+    private func pkgConfigPath(platform: PlatformType, arch: ArchType) -> String {
+        var pkgConfigPath = ""
+        for lib in ["SSL", "Fribidi", "ASS", "SRT"] {
+            let path = URL.currentDirectory + [lib, platform.rawValue, "thin", arch.rawValue]
+            if FileManager.default.fileExists(atPath: path.path) {
+                pkgConfigPath += "\(path.path)/lib/pkgconfig:"
+            }
+        }
+        return pkgConfigPath
     }
 
     func environment(platform: PlatformType, arch: ArchType) -> [String: String] {
@@ -110,7 +121,8 @@ private class BaseBuild {
          "CFLAGS": cFlags(platform: platform, arch: arch),
          "CPPFLAGS": cFlags(platform: platform, arch: arch),
          "LDFLAGS": ldFlags(platform: platform, arch: arch),
-         "PKG_CONFIG_PATH": pkgConfigPath(platform: platform, arch: arch)]
+         "PKG_CONFIG_PATH": pkgConfigPath(platform: platform, arch: arch),
+         "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]
     }
 
     func ccFlags(platform _: PlatformType, arch _: ArchType) -> String {
@@ -146,16 +158,16 @@ private class BaseBuild {
     func createXCFramework() throws {
         for framework in frameworks() {
             var arguments = ["-create-xcframework"]
-            let XCFrameworkFile = URL.currentDirectory + ["../Sources", framework + ".xcframework"]
-            if FileManager.default.fileExists(atPath: XCFrameworkFile.path) {
-                try? FileManager.default.removeItem(at: XCFrameworkFile)
-            }
             for platform in BaseBuild.platforms {
                 arguments.append("-framework")
                 arguments.append(try createFramework(framework: framework, platform: platform))
             }
             arguments.append("-output")
+            let XCFrameworkFile = URL.currentDirectory + ["../Sources", framework + ".xcframework"]
             arguments.append(XCFrameworkFile.path)
+            if FileManager.default.fileExists(atPath: XCFrameworkFile.path) {
+                try? FileManager.default.removeItem(at: XCFrameworkFile)
+            }
             try Utility.launch(path: "/usr/bin/xcodebuild", arguments: arguments)
         }
     }
@@ -163,7 +175,7 @@ private class BaseBuild {
     private func createFramework(framework: String, platform: PlatformType) throws -> String {
         let frameworkDir = URL.currentDirectory + [library, platform.rawValue, "\(framework).framework"]
         try? FileManager.default.removeItem(at: frameworkDir)
-        try FileManager.default.createDirectory(at: frameworkDir, withIntermediateDirectories: true, attributes: nil)
+        try? FileManager.default.createDirectory(at: frameworkDir, withIntermediateDirectories: true, attributes: nil)
         var arguments = ["-create"]
         for arch in architectures(platform) {
             let prefix = thinDir(platform: platform, arch: arch)
@@ -172,12 +184,12 @@ private class BaseBuild {
             if !FileManager.default.fileExists(atPath: headerURL.path) {
                 headerURL = prefix + "include"
             }
-            try FileManager.default.copyItem(at: headerURL, to: frameworkDir + "Headers")
+            try? FileManager.default.copyItem(at: headerURL, to: frameworkDir + "Headers")
         }
         arguments.append("-output")
         arguments.append((frameworkDir + framework).path)
         try Utility.launch(path: "/usr/bin/lipo", arguments: arguments)
-        try FileManager.default.createDirectory(at: frameworkDir + "Modules", withIntermediateDirectories: true, attributes: nil)
+        try? FileManager.default.createDirectory(at: frameworkDir + "Modules", withIntermediateDirectories: true, attributes: nil)
         var modulemap = """
         framework module \(framework) [system] {
             umbrella "."
@@ -278,19 +290,6 @@ private class BuildFFMPEG: BaseBuild {
         }
     }
 
-    override func pkgConfigPath(platform: PlatformType, arch: ArchType) -> String {
-        var pkgConfigPath = super.pkgConfigPath(platform: platform, arch: arch)
-        let opensslPath = URL.currentDirectory + ["SSL", platform.rawValue, "thin", arch.rawValue]
-        if FileManager.default.fileExists(atPath: opensslPath.path) {
-            pkgConfigPath += "\(opensslPath.path)/lib/pkgconfig:"
-        }
-        let srtPath = URL.currentDirectory + ["SRT", platform.rawValue, "thin", arch.rawValue]
-        if FileManager.default.fileExists(atPath: srtPath.path) {
-            pkgConfigPath += "\(srtPath.path)/lib/pkgconfig:"
-        }
-        return pkgConfigPath
-    }
-
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         var arguments = super.arguments(platform: platform, arch: arch)
         arguments += ffmpegConfiguers
@@ -354,7 +353,7 @@ private class BuildFFMPEG: BaseBuild {
     private func replaceBin(prefix: URL, item: String) throws {
         if FileManager.default.fileExists(atPath: (prefix + ["bin", item]).path) {
             try? FileManager.default.removeItem(at: URL(fileURLWithPath: "/usr/local/bin/\(item)"))
-            try FileManager.default.copyItem(at: prefix + ["bin", item], to: URL(fileURLWithPath: "/usr/local/bin/\(item)"))
+            try? FileManager.default.copyItem(at: prefix + ["bin", item], to: URL(fileURLWithPath: "/usr/local/bin/\(item)"))
         }
     }
 
@@ -373,12 +372,12 @@ private class BuildFFMPEG: BaseBuild {
         }
         let target = URL.currentDirectory + ["../Sources", "FFmpeg"]
         try? FileManager.default.removeItem(at: target)
-        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true, attributes: nil)
+        try? FileManager.default.createDirectory(at: target, withIntermediateDirectories: true, attributes: nil)
         let thin = thinDir(platform: platform, arch: arch)
-        try FileManager.default.copyItem(at: thin + "include", to: target + "include")
+        try? FileManager.default.copyItem(at: thin + "include", to: target + "include")
         let scratchURL = scratch(platform: platform, arch: arch)
-        try FileManager.default.createDirectory(at: target + "include", withIntermediateDirectories: true, attributes: nil)
-        try FileManager.default.copyItem(at: scratchURL + "config.h", to: target + "include" + "config.h")
+        try? FileManager.default.createDirectory(at: target + "include", withIntermediateDirectories: true, attributes: nil)
+        try? FileManager.default.copyItem(at: scratchURL + "config.h", to: target + "include" + "config.h")
         let fileNames = try FileManager.default.contentsOfDirectory(atPath: scratchURL.path)
         for fileName in fileNames where fileName.hasPrefix("lib") {
             var url = scratchURL + fileName
@@ -391,22 +390,22 @@ private class BuildFFMPEG: BaseBuild {
                         if subpath.hasSuffix(".c") {
                             let srcURL = url + subpath
                             let dstURL = target + "include" + fileName + subpath
-                            try FileManager.default.copyItem(at: srcURL, to: dstURL)
+                            try? FileManager.default.copyItem(at: srcURL, to: dstURL)
                         } else if subpath.hasSuffix(".o") {
                             let subpath = subpath.replacingOccurrences(of: ".o", with: ".c")
                             let srcURL = scratchURL + "src" + fileName + subpath
                             let dstURL = dstDir + subpath
                             let dstURLDir = dstURL.deletingLastPathComponent()
                             if !FileManager.default.fileExists(atPath: dstURLDir.path) {
-                                try FileManager.default.createDirectory(at: dstURLDir, withIntermediateDirectories: true, attributes: nil)
+                                try? FileManager.default.createDirectory(at: dstURLDir, withIntermediateDirectories: true, attributes: nil)
                             }
-                            try FileManager.default.copyItem(at: srcURL, to: dstURL)
+                            try? FileManager.default.copyItem(at: srcURL, to: dstURL)
                         }
                     }
                 }
                 url = scratchURL + "src" + fileName
                 // copy .h
-                try FileManager.default.copyItem(at: scratchURL + "src" + "compat", to: target + "compat")
+                try? FileManager.default.copyItem(at: scratchURL + "src" + "compat", to: target + "compat")
                 if let subpaths = FileManager.default.enumerator(atPath: url.path) {
                     let dstDir = target + "include" + fileName
                     while let subpath = subpaths.nextObject() as? String {
@@ -415,9 +414,9 @@ private class BuildFFMPEG: BaseBuild {
                             let dstURL = dstDir + subpath
                             let dstURLDir = dstURL.deletingLastPathComponent()
                             if !FileManager.default.fileExists(atPath: dstURLDir.path) {
-                                try FileManager.default.createDirectory(at: dstURLDir, withIntermediateDirectories: true, attributes: nil)
+                                try? FileManager.default.createDirectory(at: dstURLDir, withIntermediateDirectories: true, attributes: nil)
                             }
-                            try FileManager.default.copyItem(at: srcURL, to: dstURL)
+                            try? FileManager.default.copyItem(at: srcURL, to: dstURL)
                         }
                     }
                 }
@@ -616,17 +615,34 @@ private class BuildSRT: BaseBuild {
         try super.buildALL()
     }
 
-    override func pkgConfigPath(platform: PlatformType, arch: ArchType) -> String {
-        var pkgConfigPath = super.pkgConfigPath(platform: platform, arch: arch)
-        let opensslPath = URL.currentDirectory + ["SSL", platform.rawValue, "thin", arch.rawValue]
-        if FileManager.default.fileExists(atPath: opensslPath.path) {
-            pkgConfigPath += "\(opensslPath.path)/lib/pkgconfig:"
-        }
-        return pkgConfigPath
-    }
-
     override func frameworks() -> [String] {
         ["Libsrt"]
+    }
+}
+
+private class BuildFribidi: BaseBuild {
+    private let version = "1.0.12"
+    init() {
+        super.init(library: "Fribidi", directoryName: "fribidi-\(version)")
+    }
+
+    override func buildALL() throws {
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
+            Utility.shell("curl https://codeload.github.com/fribidi/fribidi/tar.gz/refs/tags/v\(version) | tar xj")
+        }
+        try super.buildALL()
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        super.arguments(platform: platform, arch: arch) +
+            ["--with-pic",
+             "--with-sysroot=\(platform.isysroot())",
+             "--enable-static",
+             "--disable-shared",
+             "--disable-fast-install",
+             "--disable-debug",
+             "--disable-deprecated",
+             "--host=\(arch.arch())-apple-darwin"]
     }
 }
 
@@ -666,13 +682,19 @@ private class BuildMPV: BaseBuild {
     }
 
     override func buildALL() throws {
-        if Utility.shell("which meson") == nil {
-            Utility.shell("brew install meson")
-        }
         if !FileManager.default.fileExists(atPath: directoryURL.path) {
-            Utility.shell("curl https://github.com/mpv-player/mpv/archive/refs/tags/v\(version) | tar xj")
+            Utility.shell("curl https://codeload.github.com/mpv-player/mpv/tar.gz/refs/tags/v\(version).tar.gz | tar xj")
         }
         try super.buildALL()
+    }
+
+    override func build(platform: PlatformType, arch: ArchType) throws {
+        let url = scratch(platform: platform, arch: arch)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
+        let environ = environment(platform: platform, arch: arch)
+        try Utility.launch(path: (directoryURL + "bootstrap.py").path, arguments: [], currentDirectoryURL: directoryURL)
+        try Utility.launch(path: "/usr/bin/python3", arguments: [(directoryURL + "waf").path, "configure"], currentDirectoryURL: url, environment: environ)
+        try Utility.launch(path: "/usr/bin/python3", arguments: [(directoryURL + "waf").path, "build"], currentDirectoryURL: url, environment: environ)
     }
 }
 
@@ -818,9 +840,7 @@ enum ArchType: String, CaseIterable {
 enum Utility {
     @discardableResult
     static func shell(_ command: String, isOutput _: Bool = false, currentDirectoryURL: URL? = nil, environment: [String: String] = [:]) -> String? {
-        var environment = environment
-        environment["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        return try? launch(path: "/bin/zsh", arguments: ["-c", command], currentDirectoryURL: currentDirectoryURL, environment: environment)
+        try? launch(path: "/bin/zsh", arguments: ["-c", command], currentDirectoryURL: currentDirectoryURL, environment: environment)
     }
 
     @discardableResult
@@ -836,6 +856,7 @@ enum Utility {
         }
         task.arguments = arguments
         task.executableURL = URL(fileURLWithPath: path)
+        print(path + " " + arguments.joined(separator: " "))
         task.launch()
         task.waitUntilExit()
         if task.terminationStatus == 0 {
