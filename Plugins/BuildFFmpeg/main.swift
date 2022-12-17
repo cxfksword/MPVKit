@@ -54,12 +54,10 @@ enum BuildFFmpeg {
             try BuildHarfbuzz().buildALL()
             try BuildASS().buildALL()
         }
-
+        try BuildFFMPEG(arguments: arguments).buildALL()
         if arguments.firstIndex(of: "enable-mpv") != nil {
             try BuildMPV().buildALL()
         }
-
-        try BuildFFMPEG(arguments: arguments).buildALL()
     }
 }
 
@@ -169,6 +167,7 @@ private class BaseBuild {
         ["LC_CTYPE": "C",
          "CC": ccFlags(platform: platform, arch: arch),
          "CFLAGS": cFlags(platform: platform, arch: arch),
+         "CPPFLAGS": cFlags(platform: platform, arch: arch),
          "CXXFLAGS": cFlags(platform: platform, arch: arch),
          "LDFLAGS": ldFlags(platform: platform, arch: arch),
          "PKG_CONFIG_PATH": pkgConfigPath(platform: platform, arch: arch),
@@ -203,10 +202,6 @@ private class BaseBuild {
     func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         [
             "--prefix=\(thinDir(platform: platform, arch: arch).path)",
-            "--enable-static",
-            "--disable-shared",
-            "--with-pic",
-            "--host=\(platform.host(arch: arch))",
         ]
     }
 
@@ -522,6 +517,7 @@ private class BuildFFMPEG: BaseBuild {
         "--disable-xlib", "--disable-swscale-alpha", "--disable-symver", "--disable-small",
         "--enable-cross-compile", "--enable-gpl", "--enable-libxml2", "--enable-nonfree",
         "--enable-runtime-cpudetect", "--enable-thumb", "--enable-version3", "--pkg-config-flags=--static",
+        "--enable-static", "--disable-shared",
         // Documentation options:
         "--disable-doc", "--disable-htmlpages", "--disable-manpages", "--disable-podpages", "--disable-txtpages",
         // Component options:
@@ -613,11 +609,11 @@ private class BuildOpenSSL: BaseBuild {
     }
 
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
-        [
-            platform.target(arch: arch),
-            "--prefix=\(thinDir(platform: platform, arch: arch).path)",
-            "no-async", "no-shared", "no-dso", "no-engine", "no-tests",
-        ]
+        super.arguments(platform: platform, arch: arch) +
+            [
+                platform.target(arch: arch),
+                "no-async", "no-shared", "no-dso", "no-engine", "no-tests",
+            ]
     }
 }
 
@@ -657,6 +653,10 @@ private class BuildFribidi: BaseBuild {
                 "--disable-fast-install",
                 "--disable-debug",
                 "--disable-deprecated",
+                "--enable-static",
+                "--with-pic",
+                "--disable-shared",
+                "--host=\(platform.host(arch: arch))",
             ]
     }
 }
@@ -681,6 +681,10 @@ private class BuildASS: BaseBuild {
                 "--disable-test",
                 "--disable-profile",
                 "--disable-coretext",
+                "--enable-static",
+                "--with-pic",
+                "--disable-shared",
+                "--host=\(platform.host(arch: arch))",
             ]
     }
 }
@@ -697,6 +701,10 @@ private class BuildHarfbuzz: BaseBuild {
                 "--with-glib=no",
                 "--disable-fast-install",
                 "--with-freetype=no",
+                "--with-pic",
+                "--enable-static",
+                "--disable-shared",
+                "--host=\(platform.host(arch: arch))",
             ]
     }
 }
@@ -713,12 +721,12 @@ private class BuildMPV: BaseBuild {
         try Utility.launch(path: (directoryURL + "bootstrap.py").path, arguments: [], currentDirectoryURL: directoryURL)
         try Utility.launch(path: "/usr/bin/python3", arguments: [(directoryURL + "waf").path, "configure"] + arguments(platform: platform, arch: arch), currentDirectoryURL: directoryURL, environment: environ)
         try Utility.launch(path: "/usr/bin/python3", arguments: [(directoryURL + "waf").path, "build"], currentDirectoryURL: directoryURL, environment: environ)
+        try Utility.launch(path: "/usr/bin/python3", arguments: [(directoryURL + "waf").path, "install"], currentDirectoryURL: directoryURL, environment: environ)
     }
 
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
-//        super.arguments(platform: platform, arch: arch) +
+        super.arguments(platform: platform, arch: arch) +
             [
-                "--prefix=\(thinDir(platform: platform, arch: arch).path)",
                 "--disable-cplayer",
                 "--disable-lcms2",
                 "--disable-lua",
@@ -729,7 +737,7 @@ private class BuildMPV: BaseBuild {
                 "--disable-javascript",
                 "--disable-libbluray",
                 "--disable-vapoursynth",
-                // "--enable-uchardet",
+//                "--swift",
                 "--enable-lgpl",
             ]
     }
