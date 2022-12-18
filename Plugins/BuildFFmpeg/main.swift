@@ -40,7 +40,6 @@ enum BuildFFmpeg {
         }
         if arguments.firstIndex(of: "enable-openssl") != nil {
             try BuildOpenSSL().buildALL()
-//            try BuildBoringSSL().buildALL()
         }
         if Utility.shell("which pkg-config") == nil {
             Utility.shell("brew install pkg-config")
@@ -113,7 +112,7 @@ private class BaseBuild {
         }
         try? FileManager.default.removeItem(at: URL.currentDirectory + library.rawValue)
         for platform in BaseBuild.platforms {
-            for arch in platform.architectures() {
+            for arch in architectures(platform) {
                 try build(platform: platform, arch: arch)
             }
         }
@@ -143,7 +142,7 @@ private class BaseBuild {
                 try? Utility.launch(path: "/usr/local/bin/autoreconf", arguments: ["--force", "--install", "-I", "m4"], currentDirectoryURL: directoryURL, environment: environ)
             }
         }
-        try? Utility.launch(path: "/usr/bin/make", arguments: ["clean"], currentDirectoryURL: url)
+        try? Utility.launch(path: "/usr/bin/make", arguments: ["distclean"], currentDirectoryURL: url)
         try Utility.launch(path: configure.path, arguments: arguments(platform: platform, arch: arch), currentDirectoryURL: url, environment: environ)
         modifyMakefile(url: url + "Makefile")
         try Utility.launch(path: "/usr/bin/make", arguments: ["-j8", "-s"], currentDirectoryURL: url, environment: environ)
@@ -167,7 +166,6 @@ private class BaseBuild {
         ["LC_CTYPE": "C",
          "CC": ccFlags(platform: platform, arch: arch),
          "CFLAGS": cFlags(platform: platform, arch: arch),
-         "CPPFLAGS": cFlags(platform: platform, arch: arch),
          "CXXFLAGS": cFlags(platform: platform, arch: arch),
          "LDFLAGS": ldFlags(platform: platform, arch: arch),
          "PKG_CONFIG_PATH": pkgConfigPath(platform: platform, arch: arch),
@@ -347,6 +345,12 @@ private class BuildFFMPEG: BaseBuild {
         }
     }
 
+    override func environment(platform: PlatformType, arch: ArchType) -> [String: String] {
+        var environ = super.environment(platform: platform, arch: arch)
+        environ["CPPFLAGS"] = cFlags(platform: platform, arch: arch)
+        return environ
+    }
+
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         var arguments = super.arguments(platform: platform, arch: arch)
         arguments += ffmpegConfiguers
@@ -395,15 +399,19 @@ private class BuildFFMPEG: BaseBuild {
         //            arguments.append("--assert-level=1")
         //        }
 
-        let opensslPath = URL.currentDirectory + ["SSL", platform.rawValue, "thin", arch.rawValue]
+        let opensslPath = URL.currentDirectory + [Library.openssl.rawValue, platform.rawValue, "thin", arch.rawValue]
         if FileManager.default.fileExists(atPath: opensslPath.path) {
             arguments.append("--enable-openssl")
         }
-        let srtPath = URL.currentDirectory + ["SRT", platform.rawValue, "thin", arch.rawValue]
+        let srtPath = URL.currentDirectory + [Library.srt.rawValue, platform.rawValue, "thin", arch.rawValue]
         if FileManager.default.fileExists(atPath: srtPath.path) {
             arguments.append("--enable-libsrt")
             arguments.append("--enable-protocol=libsrt")
         }
+//        let assPath = URL.currentDirectory + [Library.libass.rawValue, platform.rawValue, "thin", arch.rawValue]
+//        if FileManager.default.fileExists(atPath: assPath.path) {
+//            arguments.append("--enable-libass")
+//        }
         return arguments
     }
 
@@ -420,7 +428,7 @@ private class BuildFFMPEG: BaseBuild {
 //    }
 
     private func makeFFmpegSourece() throws {
-        guard let platform = BaseBuild.platforms.first, let arch = platform.architectures().first else {
+        guard let platform = BaseBuild.platforms.first, let arch = architectures(platform).first else {
             return
         }
         let target = URL.currentDirectory + ["../Sources", "FFmpeg"]
@@ -599,15 +607,6 @@ private class BuildOpenSSL: BaseBuild {
         super.init(library: .openssl)
     }
 
-    override func architectures(_ platform: PlatformType) -> [ArchType] {
-        let archs = super.architectures(platform)
-        if platform == .ios, archs.contains(.arm64e) {
-            return archs.filter { $0 != .arm64 }
-        } else {
-            return archs
-        }
-    }
-
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         super.arguments(platform: platform, arch: arch) +
             [
@@ -656,6 +655,7 @@ private class BuildFribidi: BaseBuild {
                 "--enable-static",
                 "--with-pic",
                 "--disable-shared",
+                "--disable-dependency-tracking",
                 "--host=\(platform.host(arch: arch))",
             ]
     }
@@ -670,9 +670,6 @@ private class BuildASS: BaseBuild {
         let asmOptions = platform == .maccatalyst || arch == .x86_64 ? "--disable-asm" : "--enable-asm"
         return super.arguments(platform: platform, arch: arch) +
             [
-                //                asmOptions,
-                // todo
-                "--disable-asm",
                 "--with-sysroot=\(platform.isysroot())",
                 "--disable-libtool-lock",
                 "--disable-fontconfig",
@@ -684,7 +681,11 @@ private class BuildASS: BaseBuild {
                 "--enable-static",
                 "--with-pic",
                 "--disable-shared",
+                "--disable-dependency-tracking",
                 "--host=\(platform.host(arch: arch))",
+//                asmOptions,
+//                todo
+                "--disable-asm",
             ]
     }
 }
@@ -704,6 +705,8 @@ private class BuildHarfbuzz: BaseBuild {
                 "--with-pic",
                 "--enable-static",
                 "--disable-shared",
+                "--disable-dependency-tracking",
+                "--with-directwrite=no",
                 "--host=\(platform.host(arch: arch))",
             ]
     }
@@ -719,6 +722,7 @@ private class BuildMPV: BaseBuild {
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
         let environ = environment(platform: platform, arch: arch)
         try Utility.launch(path: (directoryURL + "bootstrap.py").path, arguments: [], currentDirectoryURL: directoryURL)
+        try Utility.launch(path: "/usr/bin/python3", arguments: [(directoryURL + "waf").path, "distclean"], currentDirectoryURL: directoryURL, environment: environ)
         try Utility.launch(path: "/usr/bin/python3", arguments: [(directoryURL + "waf").path, "configure"] + arguments(platform: platform, arch: arch), currentDirectoryURL: directoryURL, environment: environ)
         try Utility.launch(path: "/usr/bin/python3", arguments: [(directoryURL + "waf").path, "build"], currentDirectoryURL: directoryURL, environment: environ)
         try Utility.launch(path: "/usr/bin/python3", arguments: [(directoryURL + "waf").path, "install"], currentDirectoryURL: directoryURL, environment: environ)
@@ -740,6 +744,14 @@ private class BuildMPV: BaseBuild {
 //                "--swift",
                 "--enable-lgpl",
             ]
+    }
+
+    override func architectures(_ platform: PlatformType) -> [ArchType] {
+        if platform == .macos {
+            return [.x86_64]
+        } else {
+            return super.architectures(platform)
+        }
     }
 }
 
