@@ -67,7 +67,7 @@ private enum Library: String, CaseIterable {
         case .libass:
             return "0.17.0"
         case .FFmpeg:
-            return "5.1.2"
+            return "n5.1.2"
         case .fribidi:
             return "1.0.12"
         case .harfbuzz:
@@ -75,7 +75,7 @@ private enum Library: String, CaseIterable {
         case .mpv:
             return "0.35.0"
         case .openssl:
-            return "3.0.7"
+            return "openssl-3.0.7"
         case .srt:
             return "1.5.1"
         }
@@ -83,14 +83,12 @@ private enum Library: String, CaseIterable {
 
     var url: String {
         switch self {
-        case .FFmpeg:
-            return "https://codeload.github.com/\(rawValue)/\(rawValue)/tar.gz/refs/tags/n\(version)"
-        case .libass, .harfbuzz:
+        case .FFmpeg, .libass, .harfbuzz, .openssl:
             return "https://codeload.github.com/\(rawValue)/\(rawValue)/tar.gz/refs/tags/\(version)"
-        case .openssl:
-            return "https://codeload.github.com/\(rawValue)/\(rawValue)/tar.gz/refs/tags/\(rawValue + "-" + version)"
         case .mpv:
             return "https://codeload.github.com/\(rawValue)-player/\(rawValue)/tar.gz/refs/tags/v\(version)"
+        case .srt:
+            return "https://codeload.github.com/Haivision/\(rawValue)/tar.gz/refs/tags/v\(version)"
         default:
             return "https://codeload.github.com/\(rawValue)/\(rawValue)/tar.gz/refs/tags/v\(version)"
         }
@@ -145,8 +143,8 @@ private class BaseBuild {
         try? Utility.launch(path: "/usr/bin/make", arguments: ["distclean"], currentDirectoryURL: url)
         try Utility.launch(path: configure.path, arguments: arguments(platform: platform, arch: arch), currentDirectoryURL: url, environment: environ)
         modifyMakefile(url: url + "Makefile")
-        try Utility.launch(path: "/usr/bin/make", arguments: ["-j8", "-s"], currentDirectoryURL: url, environment: environ)
-        try Utility.launch(path: "/usr/bin/make", arguments: ["-j8", "install", "-s"], currentDirectoryURL: url, environment: environ)
+        try Utility.launch(path: "/usr/bin/make", arguments: ["-j5", "-s"], currentDirectoryURL: url, environment: environ)
+        try Utility.launch(path: "/usr/bin/make", arguments: ["-j5", "install", "-s"], currentDirectoryURL: url, environment: environ)
     }
 
     func modifyMakefile(url _: URL) {}
@@ -610,7 +608,7 @@ private class BuildOpenSSL: BaseBuild {
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         super.arguments(platform: platform, arch: arch) +
             [
-                platform.target(arch: arch),
+                arch == .x86_64 ? "darwin64-x86_64" : arch == .arm64e ? "iphoneos-cross" : "darwin64-arm64",
                 "no-async", "no-shared", "no-dso", "no-engine", "no-tests",
             ]
     }
@@ -717,6 +715,21 @@ private class BuildMPV: BaseBuild {
         super.init(library: .mpv)
     }
 
+    override func buildALL() throws {
+        let path = directoryURL + "wscript_build.py"
+        if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
+            str = str.replacingOccurrences(of:
+                """
+                "osdep/subprocess-posix.c",            "posix"
+                """, with:
+                """
+                "osdep/subprocess-posix.c",            "posix && !tvos"
+                """)
+            try str.write(toFile: path.path, atomically: true, encoding: .utf8)
+        }
+        try super.buildALL()
+    }
+
     override func build(platform: PlatformType, arch: ArchType) throws {
         let url = scratch(platform: platform, arch: arch)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
@@ -821,34 +834,6 @@ private enum PlatformType: String, CaseIterable {
 
     func isysroot() -> String {
         try! Utility.launch(path: "/usr/bin/xcrun", arguments: ["--sdk", sdk().lowercased(), "--show-sdk-path"], isOutput: true)
-    }
-
-    func target(arch: ArchType) -> String {
-        if arch == .x86_64 {
-            return "darwin64-x86_64-cc"
-        } else {
-            if self == .macos || self == .tvsimulator || self == .isimulator {
-                return "darwin64-arm64-cc"
-            } else if self == .ios {
-                return "ios64-cross"
-            } else {
-                return "iphoneos-cross"
-            }
-        }
-        // switch self {
-        //     case .ios:
-        //         return "ios-cros-\(arch)"
-        //     case .isimulator:
-        //         return "ios64-sim-cross-\(arch)"
-        //     case .tvos:
-        //         return "tvos64-cross-\(arch)"
-        //     case .tvsimulator:
-        //         return "tvos-sim-cross--\(arch)"
-        //     case .macos:
-        //         return "macos-\(arch)"
-        //     case .maccatalyst:
-        //         return "mac-catalyst-\(arch)"
-        // }
     }
 
     func host(arch: ArchType) -> String {
