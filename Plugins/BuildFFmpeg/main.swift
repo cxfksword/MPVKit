@@ -21,7 +21,9 @@ enum BuildFFmpeg {
             """)
             return
         }
-
+        if Utility.shell("which pkg-config") == nil {
+            Utility.shell("brew install pkg-config")
+        }
         let path = URL.currentDirectory + "Script"
         if !FileManager.default.fileExists(atPath: path.path) {
             try? FileManager.default.createDirectory(at: path, withIntermediateDirectories: false, attributes: nil)
@@ -41,14 +43,13 @@ enum BuildFFmpeg {
         if arguments.firstIndex(of: "enable-openssl") != nil {
             try BuildOpenSSL().buildALL()
         }
-        if Utility.shell("which pkg-config") == nil {
-            Utility.shell("brew install pkg-config")
-        }
         if arguments.firstIndex(of: "enable-libsrt") != nil {
             try BuildSRT().buildALL()
         }
 
         if arguments.firstIndex(of: "enable-libass") != nil {
+            //            try BuildPng().buildALL()
+            try BuildFreetype().buildALL()
             try BuildFribidi().buildALL()
             try BuildHarfbuzz().buildALL()
             try BuildASS().buildALL()
@@ -61,36 +62,40 @@ enum BuildFFmpeg {
 }
 
 private enum Library: String, CaseIterable {
-    case FFmpeg, fribidi, harfbuzz, libass, mpv, openssl, srt
+    case FFmpeg, freetype, fribidi, harfbuzz, libass, libpng, mpv, openssl, srt
     var version: String {
         switch self {
-        case .libass:
-            return "0.17.0"
         case .FFmpeg:
             return "n5.1.2"
+        case .freetype:
+            return "VER-2-12-1"
         case .fribidi:
-            return "1.0.12"
+            return "v1.0.12"
         case .harfbuzz:
             return "5.3.1"
+        case .libass:
+            return "0.17.0"
+        case .libpng:
+            return "v1.6.39"
         case .mpv:
-            return "0.35.0"
+            return "v0.35.0"
         case .openssl:
             return "openssl-3.0.7"
         case .srt:
-            return "1.5.1"
+            return "v1.5.1"
         }
     }
 
     var url: String {
         switch self {
-        case .FFmpeg, .libass, .harfbuzz, .openssl:
-            return "https://codeload.github.com/\(rawValue)/\(rawValue)/tar.gz/refs/tags/\(version)"
+        case .libpng:
+            return "https://github.com/glennrp/\(rawValue)"
         case .mpv:
-            return "https://codeload.github.com/\(rawValue)-player/\(rawValue)/tar.gz/refs/tags/v\(version)"
+            return "https://github.com/\(rawValue)-player/\(rawValue)"
         case .srt:
-            return "https://codeload.github.com/Haivision/\(rawValue)/tar.gz/refs/tags/v\(version)"
+            return "https://github.com/Haivision/\(rawValue)"
         default:
-            return "https://codeload.github.com/\(rawValue)/\(rawValue)/tar.gz/refs/tags/v\(version)"
+            return "https://github.com/\(rawValue)/\(rawValue)"
         }
     }
 }
@@ -102,12 +107,12 @@ private class BaseBuild {
     init(library: Library) {
         self.library = library
         directoryURL = URL.currentDirectory + "\(library.rawValue)-\(library.version)"
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
+            try? Utility.launch(path: "/usr/bin/git", arguments: ["clone", "--depth", "1", "--branch", library.version, library.url, directoryURL.path])
+        }
     }
 
     func buildALL() throws {
-        if !FileManager.default.fileExists(atPath: directoryURL.path) {
-            Utility.shell("curl \(library.url) | tar xj")
-        }
         try? FileManager.default.removeItem(at: URL.currentDirectory + library.rawValue)
         for platform in BaseBuild.platforms {
             for arch in architectures(platform) {
@@ -124,30 +129,25 @@ private class BaseBuild {
     func build(platform: PlatformType, arch: ArchType) throws {
         let url = scratch(platform: platform, arch: arch)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
-        let environ = environment(platform: platform, arch: arch)
-        let configure = directoryURL + "configure"
-        if !FileManager.default.fileExists(atPath: configure.path) {
-            let autogen = directoryURL + "autogen.sh"
-            if FileManager.default.fileExists(atPath: autogen.path) {
-                do {
-                    var environ = environ
-                    environ["NOCONFIGURE"] = "1"
-                    try Utility.launch(path: autogen.path, arguments: [], environment: environ)
-                } catch {
-                    try? Utility.launch(path: "/usr/local/bin/autoreconf", arguments: ["--force", "--install", "-I", "m4"], currentDirectoryURL: directoryURL, environment: environ)
-                }
-            } else {
-                try? Utility.launch(path: "/usr/local/bin/autoreconf", arguments: ["--force", "--install", "-I", "m4"], currentDirectoryURL: directoryURL, environment: environ)
-            }
-        }
         try? Utility.launch(path: "/usr/bin/make", arguments: ["distclean"], currentDirectoryURL: url)
-        try Utility.launch(path: configure.path, arguments: arguments(platform: platform, arch: arch), currentDirectoryURL: url, environment: environ)
-        modifyMakefile(url: url + "Makefile")
+        let environ = environment(platform: platform, arch: arch)
+        try configure(buildURL: url, environ: environ, platform: platform, arch: arch)
         try Utility.launch(path: "/usr/bin/make", arguments: ["-j5", "-s"], currentDirectoryURL: url, environment: environ)
         try Utility.launch(path: "/usr/bin/make", arguments: ["-j5", "install", "-s"], currentDirectoryURL: url, environment: environ)
     }
 
-    func modifyMakefile(url _: URL) {}
+    func configure(buildURL: URL, environ: [String: String], platform: PlatformType, arch: ArchType) throws {
+        let configure = directoryURL + "configure"
+        if !FileManager.default.fileExists(atPath: configure.path) {
+            let autogen = directoryURL + "autogen.sh"
+            if FileManager.default.fileExists(atPath: autogen.path) {
+                var environ = environ
+                environ["NOCONFIGURE"] = "1"
+                try Utility.launch(path: autogen.path, arguments: [], currentDirectoryURL: directoryURL, environment: environ)
+            }
+        }
+        try Utility.launch(path: configure.path, arguments: arguments(platform: platform, arch: arch), currentDirectoryURL: buildURL, environment: environ)
+    }
 
     private func pkgConfigPath(platform: PlatformType, arch: ArchType) -> String {
         var pkgConfigPath = ""
@@ -623,10 +623,31 @@ private class BuildSRT: BaseBuild {
         if Utility.shell("which cmake") == nil {
             Utility.shell("brew install cmake")
         }
-        if Utility.shell("which wget") == nil {
-            Utility.shell("brew install wget")
-        }
         try super.buildALL()
+    }
+
+    override func configure(buildURL: URL, environ: [String: String], platform: PlatformType, arch: ArchType) throws {
+        let thinDirPath = thinDir(platform: platform, arch: arch).path
+
+        let arguments = [
+            (directoryURL + "CMakeLists.txt").path,
+            "-Wno-dev",
+            "-DUSE_ENCLIB=openssl",
+            "-DCMAKE_VERBOSE_MAKEFILE=0",
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_PREFIX_PATH=\(thinDirPath)",
+            "-DCMAKE_INSTALL_PREFIX=\(thinDirPath)",
+            "-DENABLE_STDCXX_SYNC=1",
+            "-DENABLE_CXX11=1",
+            "-DUSE_OPENSSL_PC=1",
+            "-DENABLE_DEBUG=0",
+            "-DENABLE_LOGGING=0",
+            "-DENABLE_HEAVY_LOGGING=0",
+            "-DENABLE_APPS=0",
+            "-DENABLE_SHARED=0",
+            platform == .maccatalyst ? "-DENABLE_MONOTONIC_CLOCK=0" : "-DENABLE_MONOTONIC_CLOCK=1",
+        ]
+        try Utility.launch(path: "/usr/local/bin/cmake", arguments: arguments, currentDirectoryURL: buildURL, environment: environ)
     }
 }
 
@@ -635,25 +656,104 @@ private class BuildFribidi: BaseBuild {
         super.init(library: .fribidi)
     }
 
-    override func modifyMakefile(url: URL) {
+    override func configure(buildURL: URL, environ: [String: String], platform: PlatformType, arch: ArchType) throws {
+        try super.configure(buildURL: buildURL, environ: environ, platform: platform, arch: arch)
+        let makefile = buildURL + "Makefile"
         // DISABLE BUILDING OF doc FOLDER (doc depends on c2man which is not available on all platforms)
-        if let data = FileManager.default.contents(atPath: url.path), var str = String(data: data, encoding: .utf8) {
+        if let data = FileManager.default.contents(atPath: makefile.path), var str = String(data: data, encoding: .utf8) {
             str = str.replacingOccurrences(of: " doc ", with: " ")
-            try? str.write(toFile: url.path, atomically: true, encoding: .utf8)
+            try? str.write(toFile: makefile.path, atomically: true, encoding: .utf8)
         }
     }
 
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         super.arguments(platform: platform, arch: arch) +
             [
-                "--with-sysroot=\(platform.isysroot())",
                 "--disable-fast-install",
                 "--disable-debug",
                 "--disable-deprecated",
+                "--with-sysroot=\(platform.isysroot())",
                 "--enable-static",
                 "--with-pic",
                 "--disable-shared",
                 "--disable-dependency-tracking",
+                "--host=\(platform.host(arch: arch))",
+            ]
+    }
+}
+
+private class BuildHarfbuzz: BaseBuild {
+    init() {
+        super.init(library: .harfbuzz)
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        super.arguments(platform: platform, arch: arch) +
+            [
+                "--with-glib=no",
+//                "--with-freetype=no",
+                "--disable-dependency-tracking",
+                "--with-directwrite=no",
+                "--with-sysroot=\(platform.isysroot())",
+                "--disable-fast-install",
+                "--with-pic",
+                "--enable-static",
+                "--disable-shared",
+                "--host=\(platform.host(arch: arch))",
+            ]
+    }
+}
+
+private class BuildFreetype: BaseBuild {
+    init() {
+        super.init(library: .freetype)
+    }
+
+    override func configure(buildURL: URL, environ: [String: String], platform: PlatformType, arch: ArchType) throws {
+        let autogen = directoryURL + "autogen.sh"
+        try? Utility.launch(path: autogen.path, arguments: [], currentDirectoryURL: directoryURL, environment: environ)
+        try super.configure(buildURL: buildURL, environ: environ, platform: platform, arch: arch)
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        super.arguments(platform: platform, arch: arch) +
+            [
+                "--with-zlib",
+                "--without-harfbuzz",
+                "--without-bzip2",
+                "--without-fsref",
+                "--without-quickdraw-toolbox",
+                "--without-quickdraw-carbon",
+                "--without-ats",
+                "--disable-mmap",
+                "--with-png=no",
+                "--with-sysroot=\(platform.isysroot())",
+                "--with-pic",
+                "--enable-static",
+                "--disable-shared",
+                "--disable-fast-install",
+                "--host=\(platform.host(arch: arch))",
+            ]
+    }
+}
+
+private class BuildPng: BaseBuild {
+    init() {
+        super.init(library: .libpng)
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        let asmOptions = arch == .x86_64 ? "--enable-intel-sse=yes" : "--enable-arm-neon=yes"
+        return super.arguments(platform: platform, arch: arch) +
+            [
+                asmOptions,
+                "--disable-unversioned-libpng-pc",
+                "--disable-unversioned-libpng-config",
+                "--with-sysroot=\(platform.isysroot())",
+                "--with-pic",
+                "--enable-static",
+                "--disable-shared",
+                "--disable-fast-install",
                 "--host=\(platform.host(arch: arch))",
             ]
     }
@@ -681,31 +781,9 @@ private class BuildASS: BaseBuild {
                 "--disable-shared",
                 "--disable-dependency-tracking",
                 "--host=\(platform.host(arch: arch))",
-//                asmOptions,
-//                todo
+                //                asmOptions,
+                //                todo
                 "--disable-asm",
-            ]
-    }
-}
-
-private class BuildHarfbuzz: BaseBuild {
-    init() {
-        super.init(library: .harfbuzz)
-    }
-
-    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
-        super.arguments(platform: platform, arch: arch) +
-            [
-                "--with-sysroot=\(platform.isysroot())",
-                "--with-glib=no",
-                "--disable-fast-install",
-                "--with-freetype=no",
-                "--with-pic",
-                "--enable-static",
-                "--disable-shared",
-                "--disable-dependency-tracking",
-                "--with-directwrite=no",
-                "--host=\(platform.host(arch: arch))",
             ]
     }
 }
@@ -749,13 +827,12 @@ private class BuildMPV: BaseBuild {
                 "--disable-lua",
                 "--disable-rubberband",
                 "--disable-zimg",
-                "--enable-libmpv-static",
                 "--disable-gl",
                 "--disable-javascript",
-                "--disable-libbluray",
+                "--disable-jpeg",
                 "--disable-vapoursynth",
-//                "--swift",
                 "--enable-lgpl",
+                "--enable-libmpv-static",
             ]
     }
 
