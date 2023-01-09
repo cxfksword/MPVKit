@@ -8,5 +8,5 @@ It includes scripts to build `FFmpeg` native libraries,
 ## Custom FFmpeg
 edit main.swift And run
 ```bash
-swift run build-FFmpeg enable-openssl
+swift run build-FFmpeg enable-openssl disable-ffmpeg enable-mpv enable-libass
 ```

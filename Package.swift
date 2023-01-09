@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "FFmpegKit",
+    name: "MPVKit",
     defaultLocalization: "en",
     platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13)],
     products: [
         .library(
-            name: "FFmpeg",
+            name: "Libmpv",
             type: .static,
-            targets: ["FFmpeg"]
+            targets: ["Libmpv"]
         ),
         .library(name: "Libavcodec", targets: ["Libavcodec"]),
         .library(name: "Libavfilter", targets: ["Libavfilter"]),
@@ -19,16 +19,21 @@ let package = Package(
         .library(name: "Libswscale", targets: ["Libswscale"]),
         .library(name: "Libssl", targets: ["Libssl"]),
         .library(name: "Libcrypto", targets: ["Libcrypto"]),
+        .library(name: "Libass", targets: ["Libass"]),
+        .library(name: "Libfreetype", targets: ["Libfreetype"]),
+        .library(name: "Libfribidi", targets: ["Libfribidi"]),
+        .library(name: "Libharfbuzz", targets: ["Libharfbuzz"]),
+        .library(name: "Libharfbuzz-subset", targets: ["Libharfbuzz-subset"])
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
     ],
     targets: [
         .target(
-            name: "FFmpeg",
+            name: "Libmpv",
             dependencies: [
                 "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
-                "Libssl", "Libcrypto",
+                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz", "Libharfbuzz-subset"
 //                "Libsrt",
             ],
 //            dependencies: ["Libssl", "Libcrypto"],
@@ -102,6 +107,26 @@ let package = Package(
         .binaryTarget(
             name: "Libcrypto",
             path: "Sources/Libcrypto.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libass",
+            path: "Sources/Libass.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libfreetype",
+            path: "Sources/Libfreetype.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libfribidi",
+            path: "Sources/Libfribidi.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libharfbuzz",
+            path: "Sources/Libharfbuzz.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libharfbuzz-subset",
+            path: "Sources/Libharfbuzz-subset.xcframework"
         ),
 //        .binaryTarget(
 //            name: "Libsrt",
