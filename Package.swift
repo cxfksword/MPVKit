@@ -6,7 +6,11 @@ let package = Package(
     defaultLocalization: "en",
     platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13)],
     products: [
-        .library(name: "Libmpv", targets: ["Libmpv"])
+        .library(
+            name: "MPVKit",
+            type: .static,
+            targets: ["MPVKit"]
+        ),
         .library(name: "Libavcodec", targets: ["Libavcodec"]),
         .library(name: "Libavfilter", targets: ["Libavfilter"]),
         .library(name: "Libavformat", targets: ["Libavformat"]),
@@ -26,6 +30,22 @@ let package = Package(
         // Dependencies declare other packages that this package depends on.
     ],
     targets: [
+        .target(
+            name: "MPVKit",
+            dependencies: [
+                "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
+                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz", "Libharfbuzz-subset",
+                "Libmpv"
+//                "Libsrt",
+            ],
+            linkerSettings: [
+                .linkedLibrary("bz2"),
+                .linkedLibrary("iconv"),
+                .linkedLibrary("xml2"),
+                .linkedLibrary("z"),
+                .linkedLibrary("c++"),
+            ]
+        ),
         .executableTarget(
             name: "build-FFmpeg",
             path: "Plugins/BuildFFmpeg"
@@ -44,14 +64,7 @@ let package = Package(
         // ),
         .binaryTarget(
             name: "Libmpv",
-            path: "Sources/Libmpv.xcframework",
-            linkerSettings: [
-                .linkedLibrary("bz2"),
-                .linkedLibrary("iconv"),
-                .linkedLibrary("xml2"),
-                .linkedLibrary("z"),
-                .linkedLibrary("c++"),
-            ]
+            path: "Sources/Libmpv.xcframework"
         ),
         .binaryTarget(
             name: "Libavcodec",
