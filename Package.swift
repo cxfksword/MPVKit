@@ -2,11 +2,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "MPVKit",
+    name: "FFmpegKit",
     defaultLocalization: "en",
     platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13)],
     products: [
-        .library(name: "Libmpv", targets: ["Libmpv"]),
+        .library(
+            name: "FFmpeg",
+            type: .static,
+            targets: ["FFmpeg"]
+        ),
         .library(name: "Libavcodec", targets: ["Libavcodec"]),
         .library(name: "Libavfilter", targets: ["Libavfilter"]),
         .library(name: "Libavformat", targets: ["Libavformat"]),
@@ -19,18 +23,19 @@ let package = Package(
         .library(name: "Libfreetype", targets: ["Libfreetype"]),
         .library(name: "Libfribidi", targets: ["Libfribidi"]),
         .library(name: "Libharfbuzz", targets: ["Libharfbuzz"]),
-        .library(name: "Libharfbuzz-subset", targets: ["Libharfbuzz-subset"])
+        .library(name: "Libharfbuzz-subset", targets: ["Libharfbuzz-subset"]),
+        .library(name: "Libmpv", targets: ["Libmpv"])
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
     ],
     targets: [
         .target(
-            name: "Libmpv",
-            path: "Sources/Libmpv.xcframework",
+            name: "FFmpeg",
             dependencies: [
                 "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
-                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz", "Libharfbuzz-subset"
+                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz", "Libharfbuzz-subset",
+                "Libmpv"
 //                "Libsrt",
             ],
             linkerSettings: [
@@ -57,6 +62,10 @@ let package = Package(
         //         ]
         //     )
         // ),
+        .binaryTarget(
+            name: "Libmpv",
+            path: "Sources/Libmpv.xcframework"
+        ),
         .binaryTarget(
             name: "Libavcodec",
             path: "Sources/Libavcodec.xcframework"
