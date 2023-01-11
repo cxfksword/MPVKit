@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "FFmpegKit",
+    name: "MPVKit",
     defaultLocalization: "en",
     platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13)],
     products: [
         .library(
-            name: "FFmpeg",
+            name: "MPV",
             type: .static,
-            targets: ["FFmpeg"]
+            targets: ["MPV"]
         ),
         .library(name: "Libavcodec", targets: ["Libavcodec"]),
         .library(name: "Libavfilter", targets: ["Libavfilter"]),
@@ -31,7 +31,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "FFmpeg",
+            name: "MPV",
             dependencies: [
                 "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
                 "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz", "Libharfbuzz-subset",
