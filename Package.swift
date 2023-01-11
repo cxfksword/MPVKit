@@ -25,7 +25,7 @@ let package = Package(
         // Dependencies declare other packages that this package depends on.
     ],
     targets: [
-        .binaryTarget(
+        .target(
             name: "Libmpv",
             path: "Sources/Libmpv.xcframework",
             dependencies: [
