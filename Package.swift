@@ -7,9 +7,9 @@ let package = Package(
     platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13)],
     products: [
         .library(
-            name: "MPV",
+            name: "mpv",
             type: .static,
-            targets: ["MPV"]
+            targets: ["mpv"]
         ),
         .library(name: "Libavcodec", targets: ["Libavcodec"]),
         .library(name: "Libavfilter", targets: ["Libavfilter"]),
@@ -31,7 +31,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "MPV",
+            name: "mpv",
             dependencies: [
                 "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
                 "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz", "Libharfbuzz-subset",
