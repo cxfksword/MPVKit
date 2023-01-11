@@ -21,7 +21,7 @@ Pod::Spec.new do |s|
     s.source_files = 'Sources/MPVKit/**/*.{h,c,m}'
     s.subspec 'MPVKit' do |mpv|
         mpv.libraries   = 'bz2', 'z', 'iconv', 'xml2', 'c++'
-        mpv.vendored_frameworks = 'Sources/Libmpv.xcframework','Sources/Libavcodec.xcframework','Sources/Libavfilter.xcframework','Sources/Libavformat.xcframework','Sources/Libavutil.xcframework','Sources/Libswresample.xcframework','Sources/Libswscale.xcframework'
+        mpv.vendored_frameworks = 'Sources/Libmpv.xcframework','Sources/Libavcodec.xcframework','Sources/Libavfilter.xcframework','Sources/Libavformat.xcframework','Sources/Libavutil.xcframework','Sources/Libswresample.xcframework','Sources/Libswscale.xcframework','Sources/Libass.xcframework','Sources/Libfreetype.xcframework','Sources/Libfribidi.xcframework','Sources/Libharfbuzz.xcframework','Sources/Libharfbuzz-subset.xcframework'
         mpv.dependency 'OpenSSL'
     end
 end
