@@ -6,11 +6,7 @@ let package = Package(
     defaultLocalization: "en",
     platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13)],
     products: [
-        .library(
-            name: "Libmpv",
-            type: .static,
-            targets: ["Libmpv"]
-        ),
+        .library(name: "Libmpv", targets: ["Libmpv"]),
         .library(name: "Libavcodec", targets: ["Libavcodec"]),
         .library(name: "Libavfilter", targets: ["Libavfilter"]),
         .library(name: "Libavformat", targets: ["Libavformat"]),
@@ -29,29 +25,14 @@ let package = Package(
         // Dependencies declare other packages that this package depends on.
     ],
     targets: [
-        .target(
+        .binaryTarget(
             name: "Libmpv",
+            path: "Sources/Libmpv.xcframework",
             dependencies: [
                 "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
                 "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz", "Libharfbuzz-subset"
 //                "Libsrt",
             ],
-//            dependencies: ["Libssl", "Libcrypto"],
-//            exclude: ["include", "compat"],
-//            cSettings: [
-//                .headerSearchPath("compat"),
-//                .headerSearchPath("compat/cuda"),
-//                .headerSearchPath("include/libavcodec"),
-//                .headerSearchPath("include/libavcodec/aarch64"),
-//                .headerSearchPath("include/libavcodec/arm"),
-//                .headerSearchPath("include/libavcodec/x86"),
-//                .headerSearchPath("include/libavdevice"),
-//                .headerSearchPath("include/libavfilter"),
-//                .headerSearchPath("include/libavformat"),
-//                .headerSearchPath("include/libavutil"),
-//                .headerSearchPath("include/libswresample"),
-//                .headerSearchPath("include/libswscale"),
-//            ],
             linkerSettings: [
                 .linkedLibrary("bz2"),
                 .linkedLibrary("iconv"),
