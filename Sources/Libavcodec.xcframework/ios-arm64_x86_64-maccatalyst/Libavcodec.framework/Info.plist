@@ -24,7 +24,7 @@
 <string>13.0</string>
 <key>CFBundleSupportedPlatforms</key>
 <array>
-<string>iPhoneOS</string>
+<string>MacOSX</string>
 </array>
 <key>NSPrincipalClass</key>
 <string></string>
