@@ -54,6 +54,10 @@ enum BuildFFmpeg {
             try BuildHarfbuzz().buildALL()
             try BuildASS().buildALL()
         }
+        if arguments.firstIndex(of: "enable-libsmbclient") != nil {
+            try BuildGnutls().buildALL()
+            try BuildSmbclient().buildALL()
+        }
         if arguments.firstIndex(of: "disable-ffmpeg") == nil {
             try BuildFFMPEG(arguments: arguments).buildALL()
         }
@@ -64,7 +68,7 @@ enum BuildFFmpeg {
 }
 
 private enum Library: String, CaseIterable {
-    case FFmpeg, freetype, fribidi, harfbuzz, libass, libpng, mpv, openssl, srt
+    case FFmpeg, freetype, fribidi, harfbuzz, libass, libpng, mpv, openssl, srt, smbclient, gnutls
     var version: String {
         switch self {
         case .FFmpeg:
@@ -85,6 +89,10 @@ private enum Library: String, CaseIterable {
             return "openssl-3.0.7"
         case .srt:
             return "v1.5.1"
+        case .smbclient:
+            return "v4-17-stable"
+        case .gnutls:
+            return "gnutls_3_7_x"
         }
     }
 
@@ -96,6 +104,8 @@ private enum Library: String, CaseIterable {
             return "https://github.com/\(rawValue)-player/\(rawValue)"
         case .srt:
             return "https://github.com/Haivision/\(rawValue)"
+        case .smbclient:
+            return "https://github.com/samba-team/samba"
         default:
             return "https://github.com/\(rawValue)/\(rawValue)"
         }
@@ -146,6 +156,10 @@ private class BaseBuild {
             try Utility.launch(executableURL: autogen, arguments: [], currentDirectoryURL: directoryURL, environment: environ)
         }
         let configure = directoryURL + "configure"
+        let bootstrap = directoryURL + "bootstrap"
+        if !FileManager.default.fileExists(atPath: configure.path), FileManager.default.fileExists(atPath: bootstrap.path) {
+            try Utility.launch(executableURL: bootstrap, arguments: [], currentDirectoryURL: directoryURL, environment: environ)
+        }
         try Utility.launch(executableURL: configure, arguments: arguments(platform: platform, arch: arch), currentDirectoryURL: buildURL, environment: environ)
     }
 
@@ -396,7 +410,7 @@ private class BuildFFMPEG: BaseBuild {
         //        if platform == .isimulator || platform == .tvsimulator {
         //            arguments.append("--assert-level=1")
         //        }
-        for library in [Library.openssl, .libass, .fribidi, .freetype, .srt] {
+        for library in [Library.openssl, .libass, .fribidi, .freetype, .srt, .smbclient] {
             let path = URL.currentDirectory + [library.rawValue, platform.rawValue, "thin", arch.rawValue]
             if FileManager.default.fileExists(atPath: path.path) {
                 let libraryName = [.openssl, .libass].contains(library) ? library.rawValue : "lib" + library.rawValue
@@ -606,6 +620,50 @@ private class BuildOpenSSL: BaseBuild {
     }
 }
 
+private class BuildSmbclient: BaseBuild {
+    init() {
+        super.init(library: .smbclient)
+    }
+
+    override func scratch(platform _: PlatformType, arch _: ArchType) -> URL {
+        directoryURL
+    }
+}
+
+private class BuildGnutls: BaseBuild {
+    init() {
+        super.init(library: .gnutls)
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        super.arguments(platform: platform, arch: arch) +
+            [
+                "--with-included-libtasn1",
+                "--with-included-unistring",
+                "--without-idn",
+                "--without-p11-kit",
+                "--enable-hardware-acceleration",
+                "--disable-openssl-compatibility",
+                "--disable-code-coverage",
+                "--disable-doc",
+                "--disable-manpages",
+                "--disable-guile",
+                "--disable-tests",
+                "--disable-tools",
+                "--disable-maintainer-mode",
+                "--disable-full-test-suite",
+                "--disable-debug",
+                "--with-pic",
+                "--enable-static",
+                "--disable-shared",
+                "--disable-fast-install",
+                "--disable-dependency-tracking",
+                "--host=\(platform.host(arch: arch))",
+                "--with-sysroot=\(platform.isysroot())",
+            ]
+    }
+}
+
 private class BuildSRT: BaseBuild {
     init() {
         super.init(library: .srt)
@@ -661,8 +719,8 @@ private class BuildFribidi: BaseBuild {
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         super.arguments(platform: platform, arch: arch) +
             [
-                "--disable-debug",
                 "--disable-deprecated",
+                "--disable-debug",
                 "--with-pic",
                 "--enable-static",
                 "--disable-shared",
@@ -856,7 +914,11 @@ private enum PlatformType: String, CaseIterable {
         case .isimulator, .tvsimulator:
             return [.arm64, .x86_64]
         case .macos:
+            #if arch(x86_64)
+            return [.x86_64, .arm64]
+            #else
             return [.arm64, .x86_64]
+            #endif
         case .maccatalyst:
             return [.arm64, .x86_64]
         }
