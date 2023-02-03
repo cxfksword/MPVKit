@@ -55,6 +55,8 @@ enum BuildFFmpeg {
             try BuildASS().buildALL()
         }
         if arguments.firstIndex(of: "enable-libsmbclient") != nil {
+            try BuildGmp().buildALL()
+            try BuildNettle().buildALL()
             try BuildGnutls().buildALL()
             try BuildSmbclient().buildALL()
         }
@@ -68,7 +70,7 @@ enum BuildFFmpeg {
 }
 
 private enum Library: String, CaseIterable {
-    case FFmpeg, freetype, fribidi, harfbuzz, libass, libpng, mpv, openssl, srt, smbclient, gnutls
+    case FFmpeg, freetype, fribidi, harfbuzz, libass, libpng, mpv, openssl, srt, smbclient, gnutls, gmp, nettle
     var version: String {
         switch self {
         case .FFmpeg:
@@ -90,9 +92,13 @@ private enum Library: String, CaseIterable {
         case .srt:
             return "v1.5.1"
         case .smbclient:
-            return "v4-17-stable"
+            return "samba-4.17.5"
         case .gnutls:
-            return "gnutls_3_7_x"
+            return "3.7.8"
+        case .nettle:
+            return "nettle_3.8.1_release_20220727"
+        case .gmp:
+            return "v6.2.1"
         }
     }
 
@@ -106,6 +112,10 @@ private enum Library: String, CaseIterable {
             return "https://github.com/Haivision/\(rawValue)"
         case .smbclient:
             return "https://github.com/samba-team/samba"
+        case .nettle:
+            return "https://github.com/gnutls/nettle"
+        case .gmp:
+            return "https://github.com/alisw/GMP"
         default:
             return "https://github.com/\(rawValue)/\(rawValue)"
         }
@@ -156,7 +166,11 @@ private class BaseBuild {
             try Utility.launch(executableURL: autogen, arguments: [], currentDirectoryURL: directoryURL, environment: environ)
         }
         let configure = directoryURL + "configure"
-        let bootstrap = directoryURL + "bootstrap"
+        var bootstrap = directoryURL + "bootstrap"
+        if !FileManager.default.fileExists(atPath: configure.path), FileManager.default.fileExists(atPath: bootstrap.path) {
+            try Utility.launch(executableURL: bootstrap, arguments: [], currentDirectoryURL: directoryURL, environment: environ)
+        }
+        bootstrap = directoryURL + ".bootstrap"
         if !FileManager.default.fileExists(atPath: configure.path), FileManager.default.fileExists(atPath: bootstrap.path) {
             try Utility.launch(executableURL: bootstrap, arguments: [], currentDirectoryURL: directoryURL, environment: environ)
         }
@@ -627,6 +641,50 @@ private class BuildSmbclient: BaseBuild {
 
     override func scratch(platform _: PlatformType, arch _: ArchType) -> URL {
         directoryURL
+    }
+}
+
+private class BuildGmp: BaseBuild {
+    init() {
+        super.init(library: .gmp)
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        super.arguments(platform: platform, arch: arch) +
+            [
+                "--disable-maintainer-mode",
+                "--disable-assembly",
+                "--with-pic",
+                "--enable-static",
+                "--disable-shared",
+                "--disable-fast-install",
+                "--host=\(platform.host(arch: arch))",
+                "--with-sysroot=\(platform.isysroot())",
+            ]
+    }
+}
+
+private class BuildNettle: BaseBuild {
+    init() {
+        super.init(library: .nettle)
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        super.arguments(platform: platform, arch: arch) +
+            [
+                "--disable-mini-gmp",
+                "--disable-assembler",
+                "--disable-openssl",
+                "--disable-gcov",
+                "--disable-documentation",
+                "--with-pic",
+                "--enable-static",
+                "--disable-shared",
+                "--disable-fast-install",
+                "--disable-dependency-tracking",
+                "--host=\(platform.host(arch: arch))",
+                "--with-sysroot=\(platform.isysroot())",
+            ]
     }
 }
 
