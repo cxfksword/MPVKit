@@ -423,11 +423,18 @@ private class BuildFFMPEG: BaseBuild {
             arguments.append("--enable-filter=lut")
             arguments.append("--enable-filter=negate")
             arguments.append("--enable-filter=testsrc")
-            arguments.append("--disable-avdevice")
-            //            arguments.append("--enable-avdevice")
+            arguments.append("--enable-pic")
+            arguments.append("--disable-indev=avfoundation")
+            arguments.append("--disable-outdev=audiotoolbox")
+            // arguments.append("--disable-avdevice")
+            arguments.append("--enable-avdevice")
             //            arguments.append("--enable-indev=lavfi")
         } else {
-            arguments.append("--disable-avdevice")
+            arguments.append("--enable-pic")
+            arguments.append("--disable-indev=avfoundation")
+            arguments.append("--disable-outdev=audiotoolbox")
+            arguments.append("--enable-avdevice")
+            // arguments.append("--disable-avdevice")
             arguments.append("--disable-programs")
         }
         //        if platform == .isimulator || platform == .tvsimulator {
@@ -839,10 +846,10 @@ private class BuildFreetype: BaseBuild {
                 "--with-zlib",
                 "--without-harfbuzz",
                 "--without-bzip2",
-                "--without-fsref",
+                // "--without-fsref",
                 "--without-quickdraw-toolbox",
                 "--without-quickdraw-carbon",
-                "--without-ats",
+                // "--without-ats",
                 "--disable-mmap",
                 "--with-png=no",
                 "--with-brotli=no",
@@ -919,7 +926,7 @@ private class BuildASS: BaseBuild {
 
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         // todo
-//        let asmOptions = platform == .maccatalyst || arch == .x86_64 ? "--disable-asm" : "--enable-asm"
+    //    let asmOptions = platform == .maccatalyst || arch == .x86_64 ? "--disable-asm" : "--enable-asm"
         let asmOptions = "--disable-asm"
         return super.arguments(platform: platform, arch: arch) +
             [
@@ -931,6 +938,7 @@ private class BuildASS: BaseBuild {
                 "--disable-coretext",
                 asmOptions,
                 "--with-pic",
+                // "--enable-directwrite",
                 "--enable-static",
                 "--disable-shared",
                 "--disable-fast-install",

@@ -12,6 +12,7 @@ let package = Package(
             targets: ["MPVKit"]
         ),
         .library(name: "Libavcodec", targets: ["Libavcodec"]),
+        .library(name: "Libavdevice", targets: ["Libavdevice"]),
         .library(name: "Libavfilter", targets: ["Libavfilter"]),
         .library(name: "Libavformat", targets: ["Libavformat"]),
         .library(name: "Libavutil", targets: ["Libavutil"]),
@@ -23,7 +24,6 @@ let package = Package(
         .library(name: "Libfreetype", targets: ["Libfreetype"]),
         .library(name: "Libfribidi", targets: ["Libfribidi"]),
         .library(name: "Libharfbuzz", targets: ["Libharfbuzz"]),
-        .library(name: "Libharfbuzz-subset", targets: ["Libharfbuzz-subset"]),
         .library(name: "Libuchardet", targets: ["Libuchardet"]),
         .library(name: "Libmpv", targets: ["Libmpv"])
     ],
@@ -35,7 +35,7 @@ let package = Package(
             name: "MPVKit",
             dependencies: [
                 "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
-                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz", "Libharfbuzz-subset",
+                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz",
                 "Libuchardet", "Libmpv"
 //                "Libsrt",
             ],
@@ -70,6 +70,10 @@ let package = Package(
         .binaryTarget(
             name: "Libavcodec",
             path: "Sources/Libavcodec.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libavdevice",
+            path: "Sources/Libavdevice.xcframework"
         ),
         .binaryTarget(
             name: "Libavfilter",
@@ -114,10 +118,6 @@ let package = Package(
         .binaryTarget(
             name: "Libharfbuzz",
             path: "Sources/Libharfbuzz.xcframework"
-        ),
-        .binaryTarget(
-            name: "Libharfbuzz-subset",
-            path: "Sources/Libharfbuzz-subset.xcframework"
         ),
         .binaryTarget(
             name: "Libuchardet",
