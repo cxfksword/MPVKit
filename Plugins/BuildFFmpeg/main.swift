@@ -1032,6 +1032,7 @@ private class BuildMPV: BaseBuild {
                 "--disable-javascript",
                 "--disable-jpeg",
                 "--disable-swift",
+                "--disable-libbluray",
                 "--disable-vapoursynth",
                 "--enable-uchardet",
                 "--enable-lgpl",
