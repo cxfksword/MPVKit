@@ -34,8 +34,8 @@ let package = Package(
         .target(
             name: "MPVKit",
             dependencies: [
-                "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
-                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz",
+                "Libavcodec", "Libavdevice", "Libavfilter", "Libavformat", "Libavutil", "Libswresample",
+                "Libswscale", "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz",
                 "Libuchardet", "Libmpv"
 //                "Libsrt",
             ],
