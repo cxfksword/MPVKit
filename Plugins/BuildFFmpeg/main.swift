@@ -46,9 +46,9 @@ enum BuildFFmpeg {
         if arguments.firstIndex(of: "enable-libsrt") != nil {
             try BuildSRT().buildALL()
         }
-
         if arguments.firstIndex(of: "enable-libass") != nil {
             //            try BuildPng().buildALL()
+            // try BuildBrotli().buildALL()
             try BuildFreetype().buildALL()
             try BuildFribidi().buildALL()
             try BuildHarfbuzz().buildALL()
@@ -60,29 +60,31 @@ enum BuildFFmpeg {
             try BuildGnutls().buildALL()
             try BuildSmbclient().buildALL()
         }
-        if arguments.firstIndex(of: "disable-ffmpeg") == nil {
+        if arguments.firstIndex(of: "enable-ffmpeg") != nil {
             try BuildFFMPEG(arguments: arguments).buildALL()
         }
         if arguments.firstIndex(of: "enable-mpv") != nil {
+            try BuildUchardet().buildALL()
             try BuildMPV().buildALL()
         }
     }
 }
 
 private enum Library: String, CaseIterable {
-    case FFmpeg, freetype, fribidi, harfbuzz, libass, libpng, mpv, openssl, srt, smbclient, gnutls, gmp, nettle
+    case FFmpeg, freetype, fribidi, harfbuzz, libass, libpng, mpv, openssl, srt, smbclient, gnutls, gmp, nettle, brotli, uchardet
     var version: String {
         switch self {
         case .FFmpeg:
             return "n5.1.2"
         case .freetype:
+            // VER-2-10-1以上版本需要依赖brotli库，或指定--with-brotli=no
             return "VER-2-12-1"
         case .fribidi:
             return "v1.0.12"
         case .harfbuzz:
             return "5.3.1"
         case .libass:
-            return "0.17.0"
+            return "0.17.1"
         case .libpng:
             return "v1.6.39"
         case .mpv:
@@ -99,6 +101,10 @@ private enum Library: String, CaseIterable {
             return "nettle_3.8.1_release_20220727"
         case .gmp:
             return "v6.2.1"
+        case .brotli:
+            return "v1.0.9"
+        case .uchardet:
+            return "v0.0.8"
         }
     }
 
@@ -116,6 +122,10 @@ private enum Library: String, CaseIterable {
             return "https://github.com/gnutls/nettle"
         case .gmp:
             return "https://github.com/alisw/GMP"
+        case .brotli:
+            return "https://github.com/google/\(rawValue)"
+        case .uchardet:
+            return "https://github.com/freedesktop/\(rawValue)"
         default:
             return "https://github.com/\(rawValue)/\(rawValue)"
         }
@@ -189,14 +199,16 @@ private class BaseBuild {
     }
 
     func environment(platform: PlatformType, arch: ArchType) -> [String: String] {
-        ["LC_CTYPE": "C",
-         "CC": ccFlags(platform: platform, arch: arch),
-         "CFLAGS": cFlags(platform: platform, arch: arch),
-         "CXXFLAGS": cFlags(platform: platform, arch: arch),
-         "LDFLAGS": ldFlags(platform: platform, arch: arch),
-         "PKG_CONFIG_PATH": pkgConfigPath(platform: platform, arch: arch),
-         "CMAKE_OSX_ARCHITECTURES": arch.rawValue,
-         "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]
+        [
+            "LC_CTYPE": "C",
+            "CC": ccFlags(platform: platform, arch: arch),
+            "CFLAGS": cFlags(platform: platform, arch: arch),
+            "CXXFLAGS": cFlags(platform: platform, arch: arch),
+            "LDFLAGS": ldFlags(platform: platform, arch: arch),
+            "PKG_CONFIG_PATH": pkgConfigPath(platform: platform, arch: arch),
+            "CMAKE_OSX_ARCHITECTURES": arch.rawValue,
+            "PATH": "/usr/local/opt/gnu-sed/libexec/gnubin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+         ]
     }
 
     func ccFlags(platform _: PlatformType, arch _: ArchType) -> String {
@@ -224,7 +236,7 @@ private class BaseBuild {
     }
 
     func arguments(platform: PlatformType, arch: ArchType) -> [String] {
-        [
+        return [
             "--prefix=\(thinDir(platform: platform, arch: arch).path)",
         ]
     }
@@ -380,9 +392,6 @@ private class BuildFFMPEG: BaseBuild {
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         var arguments = super.arguments(platform: platform, arch: arch)
         arguments += ffmpegConfiguers
-        arguments.append("--target-os=darwin")
-        arguments.append("--arch=\(arch.arch())")
-        arguments.append(arch.cpu())
         if isDebug {
             arguments.append("--enable-debug")
             arguments.append("--disable-stripping")
@@ -434,6 +443,10 @@ private class BuildFFMPEG: BaseBuild {
                 }
             }
         }
+        
+        arguments.append("--target-os=darwin")
+        arguments.append("--arch=\(arch.arch())")
+        arguments.append(arch.cpu())
         return arguments
     }
 
@@ -513,6 +526,9 @@ private class BuildFFMPEG: BaseBuild {
         }
         if Utility.shell("which sdl2-config") == nil {
             Utility.shell("brew install sdl2")
+        }
+        if Utility.shell("which gsed") == nil {
+            Utility.shell("brew install gnu-sed")
         }
         let lldbFile = URL.currentDirectory + "LLDBInitFile"
         try? FileManager.default.removeItem(at: lldbFile)
@@ -829,6 +845,7 @@ private class BuildFreetype: BaseBuild {
                 "--without-ats",
                 "--disable-mmap",
                 "--with-png=no",
+                "--with-brotli=no",
                 "--with-pic",
                 "--enable-static",
                 "--disable-shared",
@@ -836,6 +853,40 @@ private class BuildFreetype: BaseBuild {
                 "--host=\(platform.host(arch: arch))",
                 "--with-sysroot=\(platform.isysroot())",
             ]
+    }
+}
+
+
+private class BuildBrotli: BaseBuild {
+    init() {
+        super.init(library: .brotli)
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        super.arguments(platform: platform, arch: arch) +
+            [
+                "--enable-static",
+                "--disable-shared",
+                "--host=\(platform.host(arch: arch))",
+                "--with-sysroot=\(platform.isysroot())",
+            ]
+    }
+
+    override func buildALL() throws {
+        let configure = directoryURL + "configure"
+        try? FileManager.default.removeItem(at: configure)
+
+        try super.buildALL()
+    }
+
+    override func configure(buildURL: URL, environ: [String: String], platform: PlatformType, arch: ArchType) throws {
+        let configure = directoryURL + "configure"
+        let bootstrap = directoryURL + "bootstrap"
+        if !FileManager.default.fileExists(atPath: configure.path), FileManager.default.fileExists(atPath: bootstrap.path) {
+            Utility.shell("./bootstrap", isOutput: true, currentDirectoryURL: directoryURL, environment: environ)
+        }
+
+        try super.configure(buildURL: buildURL, environ: environ, platform: platform, arch: arch)
     }
 }
 
@@ -890,6 +941,47 @@ private class BuildASS: BaseBuild {
     }
 }
 
+private class BuildUchardet: BaseBuild {
+    init() {
+        super.init(library: .uchardet)
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        super.arguments(platform: platform, arch: arch) +
+            [
+                "--enable-static",
+                "--disable-shared",
+                "--host=\(platform.host(arch: arch))",
+                "--with-sysroot=\(platform.isysroot())",
+            ]
+    }
+
+
+    override func configure(buildURL: URL, environ: [String: String], platform: PlatformType, arch: ArchType) throws {
+        let thinDirPath = thinDir(platform: platform, arch: arch).path
+
+        let arguments = [
+            (directoryURL + "CMakeLists.txt").path,
+            "-Wno-dev",
+            "-DCMAKE_VERBOSE_MAKEFILE=0",
+            "-DBUILD_SHARED_LIBS=false",
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_PREFIX_PATH=\(thinDirPath)",
+            "-DCMAKE_INSTALL_PREFIX=\(thinDirPath)",
+            "-DCMAKE_OSX_SYSROOT=\(platform.isysroot())",
+            "-DENABLE_STDCXX_SYNC=1",
+            "-DENABLE_CXX11=1",
+            "-DENABLE_DEBUG=0",
+            "-DENABLE_LOGGING=0",
+            "-DENABLE_HEAVY_LOGGING=0",
+            "-DENABLE_APPS=0",
+            "-DENABLE_SHARED=0",
+            platform == .maccatalyst ? "-DENABLE_MONOTONIC_CLOCK=0" : "-DENABLE_MONOTONIC_CLOCK=1",
+        ]
+        try Utility.launch(path: "/usr/local/bin/cmake", arguments: arguments, currentDirectoryURL: buildURL, environment: environ)
+    }
+}
+
 private class BuildMPV: BaseBuild {
     init() {
         super.init(library: .mpv)
@@ -933,6 +1025,7 @@ private class BuildMPV: BaseBuild {
                 "--disable-jpeg",
                 "--disable-swift",
                 "--disable-vapoursynth",
+                "--enable-uchardet",
                 "--enable-lgpl",
                 "--enable-libmpv-static",
                 platform == .macos ? "--enable-videotoolbox-gl" : (platform == .maccatalyst ? "--enable-gl" : "--enable-ios-gl"),

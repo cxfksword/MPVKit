@@ -1,0 +1,4 @@
+framework module Libuchardet [system] {
+    umbrella "."
+    export *
+}

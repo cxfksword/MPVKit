@@ -24,6 +24,7 @@ let package = Package(
         .library(name: "Libfribidi", targets: ["Libfribidi"]),
         .library(name: "Libharfbuzz", targets: ["Libharfbuzz"]),
         .library(name: "Libharfbuzz-subset", targets: ["Libharfbuzz-subset"]),
+        .library(name: "Libuchardet", targets: ["Libuchardet"]),
         .library(name: "Libmpv", targets: ["Libmpv"])
     ],
     dependencies: [
@@ -35,7 +36,7 @@ let package = Package(
             dependencies: [
                 "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
                 "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz", "Libharfbuzz-subset",
-                "Libmpv"
+                "Libuchardet", "Libmpv"
 //                "Libsrt",
             ],
             linkerSettings: [
@@ -47,7 +48,7 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "build-FFmpeg",
+            name: "build",
             path: "Plugins/BuildFFmpeg"
         ),
         // .plugin(
@@ -117,6 +118,10 @@ let package = Package(
         .binaryTarget(
             name: "Libharfbuzz-subset",
             path: "Sources/Libharfbuzz-subset.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libuchardet",
+            path: "Sources/Libuchardet.xcframework"
         ),
 //        .binaryTarget(
 //            name: "Libsrt",
