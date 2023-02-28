@@ -1,4 +1,4 @@
-# MPVKit ![GitHub release](https://img.shields.io/badge/release-v5.1-blue.svg) ![CocoaPods](https://img.shields.io/cocoapods/v/ffmpeg-kit-ios-min) 
+# MPVKit ![ffmpeg](https://img.shields.io/badge/ffmpeg-v5.1-blue.svg) ![mpv](https://img.shields.io/badge/mpv-v0.35-blue.svg)
 
 `MPVKit` is a collection of tools to use `mpv` in `iOS`, `macOS`, `tvOS` applications.
 

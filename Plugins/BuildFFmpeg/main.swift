@@ -74,6 +74,8 @@ private enum Library: String, CaseIterable {
     case FFmpeg, freetype, fribidi, harfbuzz, libass, libpng, mpv, openssl, srt, smbclient, gnutls, gmp, nettle, brotli, uchardet
     var version: String {
         switch self {
+        case .mpv:
+            return "v0.35.1"
         case .FFmpeg:
             return "n5.1.2"
         case .freetype:
@@ -87,8 +89,6 @@ private enum Library: String, CaseIterable {
             return "0.17.1"
         case .libpng:
             return "v1.6.39"
-        case .mpv:
-            return "v0.35.0"
         case .openssl:
             return "openssl-3.0.7"
         case .srt:
