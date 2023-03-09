@@ -448,6 +448,9 @@ private class BuildFFMPEG: BaseBuild {
                 if library == .srt {
                     arguments.append("--enable-protocol=\(libraryName)")
                 }
+                if library == .libass {
+                    arguments.append("--enable-filter=subtitles")
+                }
             }
         }
         
