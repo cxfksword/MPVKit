@@ -11,11 +11,11 @@ let package = Package(
             type: .static,
             targets: ["MPVKit"]
         ),
-        .library(
-            name: "FFmpegKit",
-            type: .static,
-            targets: ["FFmpegKit"]
-        ),
+        // .library(
+        //     name: "FFmpegKit",
+        //     type: .static,
+        //     targets: ["FFmpegKit"]
+        // ),
         // .library(name: "Libavcodec", targets: ["Libavcodec"]),
         // .library(name: "Libavdevice", targets: ["Libavdevice"]),
         // .library(name: "Libavfilter", targets: ["Libavfilter"]),
