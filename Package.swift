@@ -11,6 +11,11 @@ let package = Package(
             type: .static,
             targets: ["MPVKit"]
         ),
+        .library(
+            name: "FFmpegKit",
+            type: .static,
+            targets: ["FFmpegKit"]
+        ),
         // .library(name: "Libavcodec", targets: ["Libavcodec"]),
         // .library(name: "Libavdevice", targets: ["Libavdevice"]),
         // .library(name: "Libavfilter", targets: ["Libavfilter"]),
@@ -40,8 +45,33 @@ let package = Package(
 //                "Libsrt",
             ],
             linkerSettings: [
+                .linkedFramework("AudioToolbox"),
+                .linkedFramework("CoreVideo"),
+                .linkedFramework("CoreFoundation"),
+                .linkedFramework("CoreMedia"),
+                .linkedFramework("Metal"),
                 .linkedFramework("VideoToolbox"),
-                .linkedFramework("AVFoundation"),
+                .linkedLibrary("bz2"),
+                .linkedLibrary("iconv"),
+                .linkedLibrary("xml2"),
+                .linkedLibrary("z"),
+                .linkedLibrary("c++"),
+            ]
+        ),
+        .target(
+            name: "FFmpegKit",
+            dependencies: [
+                "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
+                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz"
+//                "Libsrt",
+            ],
+            linkerSettings: [
+                .linkedFramework("AudioToolbox"),
+                .linkedFramework("CoreVideo"),
+                .linkedFramework("CoreFoundation"),
+                .linkedFramework("CoreMedia"),
+                .linkedFramework("Metal"),
+                .linkedFramework("VideoToolbox"),
                 .linkedLibrary("bz2"),
                 .linkedLibrary("iconv"),
                 .linkedLibrary("xml2"),
