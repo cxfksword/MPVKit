@@ -942,6 +942,7 @@ private class BuildASS: BaseBuild {
                 asmOptions,
                 "--with-pic",
                 // "--enable-directwrite",
+                "--disable-libunibreak",  // TODO: enable libunibreak may improves performance
                 "--enable-static",
                 "--disable-shared",
                 "--disable-fast-install",
@@ -1197,16 +1198,17 @@ enum Utility {
         let task = Process()
         task.environment = environment
         var standardOutput: FileHandle?
+        var logURL: URL?
         if isOutput {
             let pipe = Pipe()
             task.standardOutput = pipe
             standardOutput = pipe.fileHandleForReading
-        } else if var logURL = currentDirectoryURL {
-            logURL = logURL.appendingPathExtension("log")
-            if !FileManager.default.fileExists(atPath: logURL.path) {
-                FileManager.default.createFile(atPath: logURL.path, contents: nil)
+        } else if let curURL = currentDirectoryURL {
+            logURL = curURL.appendingPathExtension("log")
+            if !FileManager.default.fileExists(atPath: logURL!.path) {
+                FileManager.default.createFile(atPath: logURL!.path, contents: nil)
             }
-            let standardOutput = try FileHandle(forWritingTo: logURL)
+            let standardOutput = try FileHandle(forWritingTo: logURL!)
             if #available(macOS 10.15.4, *) {
                 try standardOutput.seekToEnd()
             }
@@ -1232,6 +1234,9 @@ enum Utility {
                 return ""
             }
         } else {
+            if let logURL = logURL {
+                print("\nError: please view log file for detail: \(logURL)")
+            }
             throw NSError(domain: "fail", code: Int(task.terminationStatus))
         }
         #else
