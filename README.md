@@ -1,4 +1,8 @@
-# MPVKit ![ffmpeg](https://img.shields.io/badge/ffmpeg-v5.1-blue.svg) ![mpv](https://img.shields.io/badge/mpv-v0.35-blue.svg)
+# MPVKit 
+
+[![ffmpeg](https://img.shields.io/badge/ffmpeg-v5.1-blue.svg)](https://github.com/FFmpeg/FFmpeg)
+[![mpv](https://img.shields.io/badge/mpv-v0.35-blue.svg)](https://github.com/mpv-player/mpv)
+[![license](https://img.shields.io/github/license/cxfksword/MPVKit)](https://github.com/cxfksword/MPVKit/main/LICENSE)
 
 `MPVKit` is a collection of tools to use `mpv` in `iOS`, `macOS`, `tvOS` applications.
 
