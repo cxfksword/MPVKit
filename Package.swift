@@ -45,8 +45,10 @@ let package = Package(
 //                "Libsrt",
             ],
             linkerSettings: [
+                .linkedFramework("AVFoundation"),
                 .linkedFramework("AudioToolbox"),
                 .linkedFramework("CoreVideo"),
+                .linkedFramework("CoreAudio"),
                 .linkedFramework("CoreFoundation"),
                 .linkedFramework("CoreMedia"),
                 .linkedFramework("Metal"),

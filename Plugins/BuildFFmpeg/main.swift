@@ -1,5 +1,4 @@
 import Foundation
-// import PackagePlugin
 
 do {
     try BuildFFmpeg.performCommand(arguments: Array(CommandLine.arguments.dropFirst()))
@@ -7,6 +6,69 @@ do {
     print(error.localizedDescription)
     exit(0)
 }
+
+private enum Library: String, CaseIterable {
+    case FFmpeg, freetype, fribidi, harfbuzz, libass, libpng, mpv, openssl, srt, smbclient, gnutls, gmp, nettle, brotli, uchardet
+    var version: String {
+        switch self {
+        case .mpv:
+            return "v0.36.0"
+        case .FFmpeg:
+            return "n6.0"
+        case .freetype:
+            // VER-2-10-1以上版本需要依赖brotli库，或指定--with-brotli=no
+            return "VER-2-12-1"
+        case .fribidi:
+            return "v1.0.12"
+        case .harfbuzz:
+            return "5.3.1"
+        case .libass:
+            return "0.17.1"
+        case .libpng:
+            return "v1.6.39"
+        case .openssl:
+            return "openssl-3.0.7"
+        case .srt:
+            return "v1.5.1"
+        case .smbclient:
+            return "samba-4.17.5"
+        case .gnutls:
+            return "3.7.8"
+        case .nettle:
+            return "nettle_3.8.1_release_20220727"
+        case .gmp:
+            return "v6.2.1"
+        case .brotli:
+            return "v1.0.9"
+        case .uchardet:
+            return "v0.0.8"
+        }
+    }
+
+    var url: String {
+        switch self {
+        case .libpng:
+            return "https://github.com/glennrp/\(rawValue)"
+        case .mpv:
+            return "https://github.com/\(rawValue)-player/\(rawValue)"
+        case .srt:
+            return "https://github.com/Haivision/\(rawValue)"
+        case .smbclient:
+            return "https://github.com/samba-team/samba"
+        case .nettle:
+            return "https://github.com/gnutls/nettle"
+        case .gmp:
+            return "https://github.com/alisw/GMP"
+        case .brotli:
+            return "https://github.com/google/\(rawValue)"
+        case .uchardet:
+            return "https://gitlab.freedesktop.org/uchardet/uchardet"
+        default:
+            return "https://github.com/\(rawValue)/\(rawValue)"
+        }
+    }
+}
+
 
 enum BuildFFmpeg {
     // @main struct BuildFFmpeg: CommandPlugin {
@@ -66,68 +128,6 @@ enum BuildFFmpeg {
         if arguments.firstIndex(of: "enable-mpv") != nil {
             try BuildUchardet().buildALL()
             try BuildMPV().buildALL()
-        }
-    }
-}
-
-private enum Library: String, CaseIterable {
-    case FFmpeg, freetype, fribidi, harfbuzz, libass, libpng, mpv, openssl, srt, smbclient, gnutls, gmp, nettle, brotli, uchardet
-    var version: String {
-        switch self {
-        case .mpv:
-            return "v0.35.1"
-        case .FFmpeg:
-            return "n5.1.2"
-        case .freetype:
-            // VER-2-10-1以上版本需要依赖brotli库，或指定--with-brotli=no
-            return "VER-2-12-1"
-        case .fribidi:
-            return "v1.0.12"
-        case .harfbuzz:
-            return "5.3.1"
-        case .libass:
-            return "0.17.1"
-        case .libpng:
-            return "v1.6.39"
-        case .openssl:
-            return "openssl-3.0.7"
-        case .srt:
-            return "v1.5.1"
-        case .smbclient:
-            return "samba-4.17.5"
-        case .gnutls:
-            return "3.7.8"
-        case .nettle:
-            return "nettle_3.8.1_release_20220727"
-        case .gmp:
-            return "v6.2.1"
-        case .brotli:
-            return "v1.0.9"
-        case .uchardet:
-            return "v0.0.8"
-        }
-    }
-
-    var url: String {
-        switch self {
-        case .libpng:
-            return "https://github.com/glennrp/\(rawValue)"
-        case .mpv:
-            return "https://github.com/\(rawValue)-player/\(rawValue)"
-        case .srt:
-            return "https://github.com/Haivision/\(rawValue)"
-        case .smbclient:
-            return "https://github.com/samba-team/samba"
-        case .nettle:
-            return "https://github.com/gnutls/nettle"
-        case .gmp:
-            return "https://github.com/alisw/GMP"
-        case .brotli:
-            return "https://github.com/google/\(rawValue)"
-        case .uchardet:
-            return "https://github.com/freedesktop/\(rawValue)"
-        default:
-            return "https://github.com/\(rawValue)/\(rawValue)"
         }
     }
 }
@@ -207,7 +207,7 @@ private class BaseBuild {
             "LDFLAGS": ldFlags(platform: platform, arch: arch),
             "PKG_CONFIG_PATH": pkgConfigPath(platform: platform, arch: arch),
             "CMAKE_OSX_ARCHITECTURES": arch.rawValue,
-            "PATH": "/usr/local/opt/gnu-sed/libexec/gnubin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+            "PATH": "/usr/local/opt/gnu-sed/libexec/gnubin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
          ]
     }
 
@@ -1012,6 +1012,13 @@ private class BuildMPV: BaseBuild {
             try str.write(toFile: path.path, atomically: true, encoding: .utf8)
         }
         try super.buildALL()
+
+        // copy headers
+        let includeSourceDirectory = URL.currentDirectory + ["../Sources",  "Libmpv.xcframework", "tvos-arm64", "Libmpv.framework", "Headers", "mpv"]
+        let includeDestDirectory = URL.currentDirectory + ["../Sources", "MPVKit", "include"]
+        print("Copy libmpv headers to path: \(includeDestDirectory.path)")
+        try? FileManager.default.removeItem(at: includeDestDirectory)
+        try? FileManager.default.copyItem(at: includeSourceDirectory, to: includeDestDirectory)
     }
 
     override func build(platform: PlatformType, arch: ArchType) throws {
@@ -1235,7 +1242,7 @@ enum Utility {
             }
         } else {
             if let logURL = logURL {
-                print("\nError: please view log file for detail: \(logURL)")
+                print("please view log file for detail: \(logURL)\n")
             }
             throw NSError(domain: "fail", code: Int(task.terminationStatus))
         }

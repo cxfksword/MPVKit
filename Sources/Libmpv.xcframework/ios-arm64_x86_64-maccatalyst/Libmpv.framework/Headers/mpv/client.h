@@ -182,7 +182,7 @@ extern "C" {
  * Embedding the video window
  * --------------------------
  *
- * Using the render API (in render_cb.h) is recommended. This API requires
+ * Using the render API (in render.h) is recommended. This API requires
  * you to create and maintain an OpenGL context, to which you can render
  * video using a specific API call. This API does not include keyboard or mouse
  * input directly.
@@ -240,7 +240,7 @@ extern "C" {
  * relational operators (<, >, <=, >=).
  */
 #define MPV_MAKE_VERSION(major, minor) (((major) << 16) | (minor) | 0UL)
-#define MPV_CLIENT_API_VERSION MPV_MAKE_VERSION(2, 0)
+#define MPV_CLIENT_API_VERSION MPV_MAKE_VERSION(2, 1)
 
 /**
  * The API user is allowed to "#define MPV_ENABLE_DEPRECATED 0" before
@@ -1067,6 +1067,16 @@ MPV_EXPORT int mpv_set_property(mpv_handle *ctx, const char *name, mpv_format fo
  * This is like calling mpv_set_property() with MPV_FORMAT_STRING.
  */
 MPV_EXPORT int mpv_set_property_string(mpv_handle *ctx, const char *name, const char *data);
+
+/**
+ * Convenience function to delete a property.
+ *
+ * This is equivalent to running the command "del [name]".
+ *
+ * @param name The property name. See input.rst for a list of properties.
+ * @return error code
+ */
+MPV_EXPORT int mpv_del_property(mpv_handle *ctx, const char *name);
 
 /**
  * Set a property asynchronously. You will receive the result of the operation
