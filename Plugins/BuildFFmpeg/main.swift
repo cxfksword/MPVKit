@@ -206,8 +206,7 @@ private class BaseBuild {
             "CXXFLAGS": cFlags(platform: platform, arch: arch),
             "LDFLAGS": ldFlags(platform: platform, arch: arch),
             "PKG_CONFIG_PATH": pkgConfigPath(platform: platform, arch: arch),
-            "CMAKE_OSX_ARCHITECTURES": arch.rawValue,
-            "PATH": "/usr/local/opt/gnu-sed/libexec/gnubin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+            "CMAKE_OSX_ARCHITECTURES": arch.rawValue
          ]
     }
 
@@ -1187,7 +1186,7 @@ enum Utility {
     @discardableResult
     static func shell(_ command: String, isOutput _: Bool = false, currentDirectoryURL: URL? = nil, environment: [String: String] = [:]) -> String? {
         do {
-            return try launch(executableURL: URL(fileURLWithPath: "/bin/zsh"), arguments: ["-c", command], currentDirectoryURL: currentDirectoryURL, environment: environment)
+            return try launch(executableURL: URL(fileURLWithPath: "/bin/bash"), arguments: ["-c", command], currentDirectoryURL: currentDirectoryURL, environment: environment)
         } catch {
             print(error.localizedDescription)
             return nil
@@ -1203,6 +1202,10 @@ enum Utility {
     static func launch(executableURL: URL, arguments: [String], isOutput: Bool = false, currentDirectoryURL: URL? = nil, environment: [String: String] = [:]) throws -> String {
         #if os(macOS)
         let task = Process()
+        var environment = environment
+        if !environment.keys.contains("PATH") {
+            environment["PATH"] = "/usr/local/opt/gnu-sed/libexec/gnubin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        }
         task.environment = environment
         var standardOutput: FileHandle?
         var logURL: URL?
