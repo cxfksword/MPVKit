@@ -625,7 +625,7 @@ private class BuildFFMPEG: BaseBuild {
         "--enable-demuxer=hls", "--enable-demuxer=live_flv", "--enable-demuxer=loas", "--enable-demuxer=m4v",
         "--enable-demuxer=matroska", "--enable-demuxer=mov", "--enable-demuxer=mp3", "--enable-demuxer=mpeg*",
         "--enable-demuxer=ogg", "--enable-demuxer=rm", "--enable-demuxer=rtsp", "--enable-demuxer=srt",
-        "--enable-demuxer=vc1", "--enable-demuxer=wav", "--enable-demuxer=webm_dash_manifest",
+        "--enable-demuxer=vc1", "--enable-demuxer=wav", "--enable-demuxer=webm_dash_manifest", "--enable-demuxer=webvtt",
         // ./configure --list-protocols
         "--enable-protocols",
         "--disable-protocol=bluray", "--disable-protocol=ffrtmpcrypt", "--disable-protocol=gopher", "--disable-protocol=icecast",
@@ -934,10 +934,10 @@ private class BuildASS: BaseBuild {
             [
                 "--disable-libtool-lock",
                 "--disable-fontconfig",
-                "--disable-require-system-font-provider",
+                //"--disable-require-system-font-provider",
                 "--disable-test",
                 "--disable-profile",
-                "--disable-coretext",
+                //"--disable-coretext",
                 asmOptions,
                 "--with-pic",
                 // "--enable-directwrite",
