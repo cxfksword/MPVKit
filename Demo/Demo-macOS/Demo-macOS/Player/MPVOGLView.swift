@@ -42,7 +42,7 @@ final class MPVOGLView: NSOpenGLView {
             exit(1)
         }
         
-        checkError(mpv_request_log_messages(mpv, "no"))
+        checkError(mpv_request_log_messages(mpv, "warn"))
 #if os(macOS)
         checkError(mpv_set_option_string(mpv, "input-media-keys", "yes"))
 #endif
@@ -50,6 +50,8 @@ final class MPVOGLView: NSOpenGLView {
         checkError(mpv_set_option_string(mpv, "cache-secs", "120"))
         checkError(mpv_set_option_string(mpv, "cache-pause-wait", "3"))
         checkError(mpv_set_option_string(mpv, "keep-open", "yes"))
+        checkError(mpv_set_option_string(mpv, "subs-with-matching-audio", "yes"))
+        checkError(mpv_set_option_string(mpv, "subs-fallback", "yes"))
         checkError(mpv_set_option_string(mpv, "hwdec", machine == "x86_64" ? "no" : "auto-safe"))
         checkError(mpv_set_option_string(mpv, "vo", "libmpv"))
         
@@ -97,6 +99,8 @@ final class MPVOGLView: NSOpenGLView {
     ) {
         var args = [url.absoluteString]
         var options = [String]()
+        
+        args.append("replace")
         
         if !options.isEmpty {
             args.append(options.joined(separator: ","))

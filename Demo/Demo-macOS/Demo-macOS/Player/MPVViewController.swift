@@ -26,4 +26,8 @@ class MPVViewController: NSViewController {
             self.glView.loadFile(url)
         }
     }
+    
+    func play(_ url: URL) {
+        self.glView.loadFile(url)
+    }
 }

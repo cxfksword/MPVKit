@@ -13,8 +13,39 @@ struct ContentView: View {
     init() {
         player = MPVPlayerView(playUrl: URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
     }
+    
     var body: some View {
-        VStack {
+        NavigationSplitView {
+            List {
+                Button {
+                    let url = URL(string: "https://vjs.zencdn.net/v/oceans.mp4")
+                    player.coordinator.play(url!)
+                } label: {
+                    HStack {
+                        Text("web url")
+                        Spacer()
+                    }
+                }
+                Button {
+                    let url = Bundle.main.url(forResource: "subrip", withExtension: "mkv")
+                    player.coordinator.play(url!)
+                } label: {
+                    HStack {
+                        Text("subrip")
+                        Spacer()
+                    }
+                }
+                Button {
+                    let url = Bundle.main.url(forResource: "rmvb", withExtension: "rm")
+                    player.coordinator.play(url!)
+                } label: {
+                    HStack {
+                        Text("rmvb")
+                        Spacer()
+                    }
+                }
+            }
+        } detail: {
             player
         }
         .ignoresSafeArea()

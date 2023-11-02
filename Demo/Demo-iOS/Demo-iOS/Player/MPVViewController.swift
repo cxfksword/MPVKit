@@ -49,10 +49,13 @@ class MPVViewController: GLKViewController {
             exit(1)
         }
         
+        checkError(mpv_request_log_messages(mpv, "warn"))
         checkError(mpv_set_option_string(mpv, "cache-pause-initial", "yes"))
         checkError(mpv_set_option_string(mpv, "cache-secs", "120"))
         checkError(mpv_set_option_string(mpv, "cache-pause-wait", "3"))
         checkError(mpv_set_option_string(mpv, "keep-open", "yes"))
+        checkError(mpv_set_option_string(mpv, "subs-with-matching-audio", "yes"))
+        checkError(mpv_set_option_string(mpv, "subs-fallback", "yes"))
         checkError(mpv_set_option_string(mpv, "hwdec", machine == "x86_64" ? "no" : "auto-safe"))
         checkError(mpv_set_option_string(mpv, "vo", "libmpv"))
         
@@ -123,6 +126,8 @@ class MPVViewController: GLKViewController {
     ) {
         var args = [url.absoluteString]
         var options = [String]()
+        
+        args.append("replace")
         
         if !options.isEmpty {
             args.append(options.joined(separator: ","))
