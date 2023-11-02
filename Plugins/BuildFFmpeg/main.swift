@@ -562,7 +562,7 @@ private class BuildFFMPEG: BaseBuild {
 
     private let ffmpegConfiguers = [
         // Configuration options:
-        "--disable-armv5te", "--disable-armv6", "--disable-armv6t2", "--disable-bsfs",
+        "--disable-armv5te", "--disable-armv6", "--disable-armv6t2",
         "--disable-bzlib", "--disable-gray", "--disable-iconv", "--disable-linux-perf",
         "--disable-xlib", "--disable-swscale-alpha", "--disable-symver", "--disable-small",
         "--enable-cross-compile", "--enable-gpl", "--enable-libxml2", "--enable-nonfree",
@@ -590,6 +590,8 @@ private class BuildFFMPEG: BaseBuild {
         // ,"--disable-everything"
         // 用所有的encoders的话，那avcodec就会达到40MB了，指定的话，那就只要20MB。
         "--disable-encoders",
+        // ./configure --list-bsfs
+        "--enable-bsfs",
         // ./configure --list-decoders
         "--disable-decoders",
         // 视频
