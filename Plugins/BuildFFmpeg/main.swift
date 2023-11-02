@@ -27,7 +27,8 @@ private enum Library: String, CaseIterable {
         case .libpng:
             return "v1.6.39"
         case .openssl:
-            return "openssl-3.0.7"
+            // 用openssl-3.1.0 在真机启动会_armv8_sve_probe, 3.1.1在真机启动会crash
+            return "openssl-3.1.4"
         case .srt:
             return "v1.5.1"
         case .smbclient:
