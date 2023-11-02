@@ -4,6 +4,8 @@
 [![mpv](https://img.shields.io/badge/mpv-v0.36.0-blue.svg)](https://github.com/mpv-player/mpv)
 [![license](https://img.shields.io/github/license/cxfksword/MPVKit)](https://github.com/cxfksword/MPVKit/main/LICENSE)
 
+> MPVKit is now only suitable for learning `libmpv` and is not recommended for production environments. [kingslay/KSPlayer](https://github.com/kingslay/KSPlayer) is a better choice.
+
 `MPVKit` is a collection of tools to use `mpv` in `iOS`, `macOS`, `tvOS` applications.
 
 It includes scripts to build `mpv` native libraries.
