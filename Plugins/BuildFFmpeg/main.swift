@@ -161,7 +161,6 @@ private class BaseBuild {
     func build(platform: PlatformType, arch: ArchType) throws {
         let buildURL = scratch(platform: platform, arch: arch)
         try? FileManager.default.createDirectory(at: buildURL, withIntermediateDirectories: true, attributes: nil)
-        try? _ = Utility.launch(path: "/usr/bin/make", arguments: ["distclean"], currentDirectoryURL: buildURL)
         let environ = environment(platform: platform, arch: arch)
         try configure(buildURL: buildURL, environ: environ, platform: platform, arch: arch)
         try Utility.launch(path: "/usr/bin/make", arguments: ["-j5", "-s"], currentDirectoryURL: buildURL, environment: environ)
@@ -1207,38 +1206,74 @@ enum Utility {
             environment["PATH"] = "/usr/local/opt/gnu-sed/libexec/gnubin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         }
         task.environment = environment
-        var standardOutput: FileHandle?
+
+        var outputFileHandle: FileHandle?
         var logURL: URL?
-        if isOutput {
-            let pipe = Pipe()
-            task.standardOutput = pipe
-            standardOutput = pipe.fileHandleForReading
-        } else if let curURL = currentDirectoryURL {
+        var outputBuffer = Data()
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        task.standardOutput = outputPipe
+        task.standardError = errorPipe
+        if let curURL = currentDirectoryURL {
+            // output to file
             logURL = curURL.appendingPathExtension("log")
             if !FileManager.default.fileExists(atPath: logURL!.path) {
                 FileManager.default.createFile(atPath: logURL!.path, contents: nil)
             }
-            let standardOutput = try FileHandle(forWritingTo: logURL!)
-            if #available(macOS 10.15.4, *) {
-                try standardOutput.seekToEnd()
-            }
-            task.standardOutput = standardOutput
+
+            outputFileHandle = try FileHandle(forWritingTo: logURL!)
+            outputFileHandle?.seekToEndOfFile()
         }
+        outputPipe.fileHandleForReading.readabilityHandler = { fileHandle in
+            let data = fileHandle.availableData
+
+            if !data.isEmpty {
+                outputBuffer.append(data)
+                if let outputString = String(data: data, encoding: .utf8) {
+                    if isOutput {
+                        print(outputString.trimmingCharacters(in: .newlines))
+                    }
+
+                    // Write to file simultaneously.
+                    outputFileHandle?.write(data)
+                }
+            } else {
+                // Close the read capability processing program and clean up resources.
+                fileHandle.readabilityHandler = nil
+                fileHandle.closeFile()
+            }
+        }
+        errorPipe.fileHandleForReading.readabilityHandler = { fileHandle in
+            let data = fileHandle.availableData
+
+            if !data.isEmpty {
+                if let outputString = String(data: data, encoding: .utf8) {
+                    print(outputString.trimmingCharacters(in: .newlines))
+
+                    // Write to file simultaneously.
+                    outputFileHandle?.write(data)
+                }
+            } else {
+                // Close the read capability processing program and clean up resources.
+                fileHandle.readabilityHandler = nil
+                fileHandle.closeFile()
+            }
+        }
+    
         task.arguments = arguments
         var log = executableURL.path + " " + arguments.joined(separator: " ") + " environment: " + environment.description
         if let currentDirectoryURL {
             log += " url: \(currentDirectoryURL)"
         }
         print(log)
+        outputFileHandle?.write("\(log)\n".data(using: .utf8)!)
         task.currentDirectoryURL = currentDirectoryURL
         task.executableURL = executableURL
         try task.run()
         task.waitUntilExit()
         if task.terminationStatus == 0 {
-            if isOutput, let standardOutput {
-                let data = standardOutput.readDataToEndOfFile()
-                let result = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .newlines) ?? ""
-                print(result)
+            if isOutput {
+                let result = String(data: outputBuffer, encoding: .utf8)?.trimmingCharacters(in: .newlines) ?? ""
                 return result
             } else {
                 return ""
