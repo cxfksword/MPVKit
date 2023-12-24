@@ -170,7 +170,7 @@ enum BuildFFmpeg {
         if arguments.firstIndex(of: "enable-libass") != nil {
             // try BuildBrotli().buildALL()
             // try BuildIconv().buildALL()
-            // try BuildUnibreak().buildALL()
+            try BuildUnibreak().buildALL()
             try BuildFontconfig().buildALL()
             try BuildFreetype().buildALL()
             try BuildFribidi().buildALL()
@@ -1316,10 +1316,10 @@ private class BuildIconv: BaseBuild {
         ]
     }
 
-    // override func frameworks() throws -> [String] {
-    //     // ignore generate xci framework
-    //     return []
-    // }
+    override func frameworks() throws -> [String] {
+        // ignore generate xci framework
+        return []
+    }
 }
 
 private class BuildASS: BaseBuild {
