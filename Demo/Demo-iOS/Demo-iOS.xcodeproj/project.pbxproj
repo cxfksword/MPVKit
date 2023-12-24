@@ -16,8 +16,8 @@
 		F4A1F02F2A84F20F004E91B7 /* MPVKit in Frameworks */ = {isa = PBXBuildFile; productRef = F4A1F02E2A84F20F004E91B7 /* MPVKit */; };
 		F4A1F0332A84F2CE004E91B7 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4A1F0322A84F2CE004E91B7 /* AVFoundation.framework */; };
 		F4A1F0352A84F2D4004E91B7 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4A1F0342A84F2D4004E91B7 /* CoreAudio.framework */; };
-		F4A6336A2AF3A31A00E90C8C /* rmvb.rm in Resources */ = {isa = PBXBuildFile; fileRef = F4A633682AF3A31A00E90C8C /* rmvb.rm */; };
-		F4A6336B2AF3A31A00E90C8C /* subrip.mkv in Resources */ = {isa = PBXBuildFile; fileRef = F4A633692AF3A31A00E90C8C /* subrip.mkv */; };
+		F4BE94222B3808D500A4A1C7 /* MPVClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4BE94212B3808D500A4A1C7 /* MPVClient.swift */; };
+		F4BE94242B3809C100A4A1C7 /* MPVMetalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4BE94232B3809C100A4A1C7 /* MPVMetalViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,8 +32,8 @@
 		F4A1F0322A84F2CE004E91B7 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		F4A1F0342A84F2D4004E91B7 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		F4A1F0362A84F398004E91B7 /* MPVKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = MPVKit; path = ../..; sourceTree = "<group>"; };
-		F4A633682AF3A31A00E90C8C /* rmvb.rm */ = {isa = PBXFileReference; lastKnownFileType = file; path = rmvb.rm; sourceTree = "<group>"; };
-		F4A633692AF3A31A00E90C8C /* subrip.mkv */ = {isa = PBXFileReference; lastKnownFileType = file; path = subrip.mkv; sourceTree = "<group>"; };
+		F4BE94212B3808D500A4A1C7 /* MPVClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MPVClient.swift; sourceTree = "<group>"; };
+		F4BE94232B3809C100A4A1C7 /* MPVMetalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MPVMetalViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,7 +71,6 @@
 		F4A1F0192A84EFE2004E91B7 /* Demo-iOS */ = {
 			isa = PBXGroup;
 			children = (
-				F4A633672AF3A31A00E90C8C /* Resources */,
 				F4A1F0302A84F226004E91B7 /* Info.plist */,
 				F4A1F0282A84F022004E91B7 /* Player */,
 				F4A1F01A2A84EFE2004E91B7 /* Demo_iOSApp.swift */,
@@ -95,6 +94,8 @@
 			children = (
 				F4A1F0292A84F022004E91B7 /* MPVViewController.swift */,
 				F4A1F02A2A84F022004E91B7 /* MPVPlayerView.swift */,
+				F4BE94212B3808D500A4A1C7 /* MPVClient.swift */,
+				F4BE94232B3809C100A4A1C7 /* MPVMetalViewController.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -106,16 +107,6 @@
 				F4A1F0322A84F2CE004E91B7 /* AVFoundation.framework */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		F4A633672AF3A31A00E90C8C /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				F4A633682AF3A31A00E90C8C /* rmvb.rm */,
-				F4A633692AF3A31A00E90C8C /* subrip.mkv */,
-			);
-			name = Resources;
-			path = ../../Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -182,10 +173,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F4A6336A2AF3A31A00E90C8C /* rmvb.rm in Resources */,
 				F4A1F0222A84EFE3004E91B7 /* Preview Assets.xcassets in Resources */,
 				F4A1F01F2A84EFE3004E91B7 /* Assets.xcassets in Resources */,
-				F4A6336B2AF3A31A00E90C8C /* subrip.mkv in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -196,6 +185,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F4BE94242B3809C100A4A1C7 /* MPVMetalViewController.swift in Sources */,
+				F4BE94222B3808D500A4A1C7 /* MPVClient.swift in Sources */,
 				F4A1F01D2A84EFE2004E91B7 /* ContentView.swift in Sources */,
 				F4A1F02C2A84F022004E91B7 /* MPVPlayerView.swift in Sources */,
 				F4A1F01B2A84EFE2004E91B7 /* Demo_iOSApp.swift in Sources */,

@@ -22,24 +22,21 @@ struct ContentView: View {
             ScrollView(.horizontal) {
                 HStack {
                     Button {
-                        let url = URL(string: "https://vjs.zencdn.net/v/oceans.mp4")
-                        player.coordinator.play(url!)
+                        player.coordinator.play(URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
                     } label: {
                         VStack {
                             Text("web url")
                         }.frame(width: 100, height: 100)
                     }
                     Button {
-                        let url = Bundle.main.url(forResource: "subrip", withExtension: "mkv")
-                        player.coordinator.play(url!)
+                        player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/subrip.mkv")!)
                     } label: {
                         VStack {
                             Text("subrip")
                         }.frame(width: 100, height: 100)
                     }
                     Button {
-                        let url = Bundle.main.url(forResource: "rmvb", withExtension: "rm")
-                        player.coordinator.play(url!)
+                        player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/rmvb.rm")!)
                     } label: {
                         VStack {
                             Text("rmvb")

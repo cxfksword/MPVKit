@@ -41,7 +41,10 @@ let package = Package(
             dependencies: [
                 "Libavcodec", "Libavdevice", "Libavfilter", "Libavformat", "Libavutil", "Libswresample",
                 "Libswscale", "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz",
-                "Libuchardet", "Libmpv"
+                "Libuchardet", "Libmpv",
+                "MoltenVK", "Libshaderc_combined", "lcms2", "Libplacebo", "Libfontconfig", "Libdovi", "Libunibreak",
+                .target(name: "Libdav1d", condition: .when(platforms: [.macOS, .iOS, .tvOS])),
+                .target(name: "Libbluray", condition: .when(platforms: [.macOS, .macCatalyst])),
 //                "Libsrt",
             ],
             linkerSettings: [
@@ -55,6 +58,7 @@ let package = Package(
                 .linkedFramework("VideoToolbox"),
                 .linkedLibrary("bz2"),
                 .linkedLibrary("iconv"),
+                .linkedLibrary("expat"),
                 .linkedLibrary("xml2"),
                 .linkedLibrary("z"),
                 .linkedLibrary("c++"),
@@ -64,7 +68,9 @@ let package = Package(
             name: "FFmpegKit",
             dependencies: [
                 "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
-                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz"
+                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz",
+                "MoltenVK", "Libshaderc_combined", "lcms2", "Libplacebo", "Libfontconfig", "Libdovi", "Libunibreak",
+                .target(name: "Libdav1d", condition: .when(platforms: [.macOS, .iOS, .tvOS])),
 //                "Libsrt",
             ],
             linkerSettings: [
@@ -76,6 +82,7 @@ let package = Package(
                 .linkedFramework("VideoToolbox"),
                 .linkedLibrary("bz2"),
                 .linkedLibrary("iconv"),
+                .linkedLibrary("expat"),
                 .linkedLibrary("xml2"),
                 .linkedLibrary("z"),
                 .linkedLibrary("c++"),
@@ -97,6 +104,42 @@ let package = Package(
         //         ]
         //     )
         // ),
+        .binaryTarget(
+            name: "MoltenVK",
+            path: "Sources/MoltenVK.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libshaderc_combined",
+            path: "Sources/libshaderc_combined.xcframework"
+        ),
+        .binaryTarget(
+            name: "lcms2",
+            path: "Sources/lcms2.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libfontconfig",
+            path: "Sources/Libfontconfig.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libunibreak",
+            path: "Sources/Libunibreak.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libdav1d",
+            path: "Sources/Libdav1d.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libbluray",
+            path: "Sources/Libbluray.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libdovi",
+            path: "Sources/Libdovi.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libplacebo",
+            path: "Sources/libplacebo.xcframework"
+        ),
         .binaryTarget(
             name: "Libmpv",
             path: "Sources/Libmpv.xcframework"

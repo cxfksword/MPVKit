@@ -42,6 +42,8 @@ final class MPVOGLView: NSOpenGLView {
             exit(1)
         }
         
+        // https://github.com/mpv-player/mpv/blob/master/DOCS/man/options.rst
+        // https://github.com/hooke007/MPV_lazy/blob/main/portable_config/mpv.conf
         checkError(mpv_request_log_messages(mpv, "warn"))
 #if os(macOS)
         checkError(mpv_set_option_string(mpv, "input-media-keys", "yes"))
