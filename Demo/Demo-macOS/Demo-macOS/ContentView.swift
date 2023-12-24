@@ -18,8 +18,7 @@ struct ContentView: View {
         NavigationSplitView {
             List {
                 Button {
-                    let url = URL(string: "https://vjs.zencdn.net/v/oceans.mp4")
-                    player.coordinator.play(url!)
+                    player.coordinator.play(URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
                 } label: {
                     HStack {
                         Text("web url")
@@ -27,8 +26,7 @@ struct ContentView: View {
                     }
                 }
                 Button {
-                    let url = Bundle.main.url(forResource: "subrip", withExtension: "mkv")
-                    player.coordinator.play(url!)
+                    player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/subrip.mkv")!)
                 } label: {
                     HStack {
                         Text("subrip")
@@ -36,8 +34,7 @@ struct ContentView: View {
                     }
                 }
                 Button {
-                    let url = Bundle.main.url(forResource: "rmvb", withExtension: "rm")
-                    player.coordinator.play(url!)
+                    player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/rmvb.rm")!)
                 } label: {
                     HStack {
                         Text("rmvb")

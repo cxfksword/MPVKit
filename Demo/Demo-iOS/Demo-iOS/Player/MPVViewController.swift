@@ -49,6 +49,8 @@ class MPVViewController: GLKViewController {
             exit(1)
         }
         
+        // https://github.com/mpv-player/mpv/blob/master/DOCS/man/options.rst
+        // https://github.com/hooke007/MPV_lazy/blob/main/portable_config/mpv.conf
         checkError(mpv_request_log_messages(mpv, "warn"))
         checkError(mpv_set_option_string(mpv, "cache-pause-initial", "yes"))
         checkError(mpv_set_option_string(mpv, "cache-secs", "120"))
