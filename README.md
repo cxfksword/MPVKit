@@ -34,4 +34,4 @@ swift run mpv --script-opts=osc-visibility=always [url]
 swift run mpv --list-options
 ```
 
-> Use <kbd>Option</kbd>+<kbd>i</kbd> to show stats overlay
+> Use <kbd>Shift</kbd>+<kbd>i</kbd> to show stats overlay
