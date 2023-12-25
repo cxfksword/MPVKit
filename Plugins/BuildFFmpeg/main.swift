@@ -1787,7 +1787,6 @@ private class BuildMPV: BaseBuild {
             "-Dvulkan=enabled",
 
             "-Djavascript=disabled",
-            "-Dlua=disabled",
             "-Dzimg=disabled",
             "-Djpeg=disabled",
             "-Dvapoursynth=disabled",
@@ -1808,10 +1807,12 @@ private class BuildMPV: BaseBuild {
             array.append("-Dcoreaudio=enabled")
             array.append("-Dgl-cocoa=enabled")
             array.append("-Dvideotoolbox-gl=enabled")
+            array.append("-Dlua=enabled")  // for show video stats information
         } else {
             array.append("-Dvideotoolbox-gl=disabled")
             array.append("-Dswift-build=disabled")
             array.append("-Daudiounit=enabled")
+            array.append("-Dlua=disabled")
             if platform == .maccatalyst {
                 array.append("-Dcocoa=disabled")
                 array.append("-Dcoreaudio=disabled")

@@ -25,3 +25,13 @@ https://github.com/cxfksword/MPVKit.git
 ```bash
 swift run build enable-openssl enable-libass enable-ffmpeg enable-mpv
 ```
+
+
+## Run default mpv player
+
+```bash
+swift run mpv --script-opts=osc-visibility=always [url]
+swift run mpv --list-options
+```
+
+> Use <kbd>Option</kbd>+<kbd>i</kbd> to show stats overlay

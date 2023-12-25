@@ -92,6 +92,10 @@ let package = Package(
             name: "build",
             path: "Plugins/BuildFFmpeg"
         ),
+        .executableTarget(
+            name: "mpv",
+            path: "Plugins/RunCPlayer"
+        ),
         // .plugin(
         //     name: "Build FFmpeg",
         //     capability: .command(
