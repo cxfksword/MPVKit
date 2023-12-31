@@ -210,8 +210,21 @@ private class BaseBuild {
     init(library: Library) {
         self.library = library
         directoryURL = URL.currentDirectory + "\(library.rawValue)-\(library.version)"
+
+        
         if !FileManager.default.fileExists(atPath: directoryURL.path) {
+            // pull code
             try! Utility.launch(path: "/usr/bin/git", arguments: ["-c", "advice.detachedHead=false", "clone", "--depth", "1", "--branch", library.version, library.url, directoryURL.path])
+
+            // apply patch
+            let patch = URL.currentDirectory + "../Plugins/BuildFFmpeg/patch/\(library.rawValue)"
+            if FileManager.default.fileExists(atPath: patch.path) {
+                _ = try? Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "."], currentDirectoryURL: directoryURL)
+                let fileNames = try! FileManager.default.contentsOfDirectory(atPath: patch.path).sorted()
+                for fileName in fileNames {
+                    _ = try? Utility.launch(path: "/usr/bin/git", arguments: ["apply", "\((patch + fileName).path)"], currentDirectoryURL: directoryURL)
+                }
+            }
         }
     }
 
@@ -1615,31 +1628,40 @@ private class BuildDovi: BaseBuild {
 private class BuildVulkan: BaseBuild {
     init() {
         super.init(library: .vulkan)
+
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
+            // switch to main branch, to pull newest code
+            try! Utility.launch(path: "/usr/bin/git", arguments: ["remote", "set-branches", "--add", "origin", "main"], currentDirectoryURL: directoryURL)
+            try! Utility.launch(path: "/usr/bin/git", arguments: ["fetch", "origin", "main:main"], currentDirectoryURL: directoryURL)
+            try! Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "main"], currentDirectoryURL: directoryURL)
+        }
     }
 
     override func buildALL() throws {
-        // var arguments = platforms().map {
-        //     "--\($0.name)"
-        // }
-        // try Utility.launch(path: (directoryURL + "fetchDependencies").path, arguments: arguments, currentDirectoryURL: directoryURL)
-        // arguments = platforms().map(\.name)
-        // try Utility.launch(path: "/usr/bin/make", arguments: arguments, currentDirectoryURL: directoryURL)
-        // try? FileManager.default.removeItem(at: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
-        // try? FileManager.default.copyItem(at: directoryURL + "Package/Release/MoltenVK/MoltenVK.xcframework", to: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
-
-        // compile is very slow, change to use github action build xciframework
-        try? FileManager.default.removeItem(at: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
+        // build from source code
         let version = self.library.version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
-        let downloadUrl = "https://github.com/KhronosGroup/MoltenVK/releases/download/v\(version)/MoltenVK-all.tar"
-        let packageURL = directoryURL + "Package/"
-        let releaseURL = packageURL + "Release/"
-        try? FileManager.default.removeItem(at: releaseURL)
-        try? FileManager.default.createDirectory(at: packageURL, withIntermediateDirectories: true)
-        Utility.shell("wget \(downloadUrl) -O MoltenVK.tar", currentDirectoryURL: packageURL)
-        Utility.shell("tar xvf MoltenVK.tar", currentDirectoryURL: packageURL)
-        try? FileManager.default.moveItem(at: packageURL + "MoltenVK", to: releaseURL)
-        let xcframeworkURL = releaseURL + "MoltenVK/MoltenVK.xcframework"
-        try? FileManager.default.copyItem(at: xcframeworkURL, to: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
+        var arguments = platforms().map {
+            "--\($0.name)"
+        }
+        try Utility.launch(path: (directoryURL + "fetchDependencies").path, arguments: arguments, currentDirectoryURL: directoryURL)
+        arguments = platforms().map(\.name)
+        try Utility.launch(path: "/usr/bin/make", arguments: arguments, currentDirectoryURL: directoryURL)
+        try? FileManager.default.removeItem(at: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
+        try? FileManager.default.copyItem(at: directoryURL + "Package/Release/MoltenVK/MoltenVK.xcframework", to: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
+
+        // // compile is very slow, change to use github action build xciframework
+        // try? FileManager.default.removeItem(at: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
+        // let version = self.library.version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+        // let downloadUrl = "https://github.com/KhronosGroup/MoltenVK/releases/download/v\(version)/MoltenVK-all.tar"
+        // let packageURL = directoryURL + "Package/"
+        // let releaseURL = packageURL + "Release/"
+        // try? FileManager.default.removeItem(at: releaseURL)
+        // try? FileManager.default.createDirectory(at: packageURL, withIntermediateDirectories: true)
+        // Utility.shell("wget \(downloadUrl) -O MoltenVK.tar", currentDirectoryURL: packageURL)
+        // Utility.shell("tar xvf MoltenVK.tar", currentDirectoryURL: packageURL)
+        // try? FileManager.default.moveItem(at: packageURL + "MoltenVK", to: releaseURL)
+        // let xcframeworkURL = releaseURL + "MoltenVK/MoltenVK.xcframework"
+        // try? FileManager.default.copyItem(at: xcframeworkURL, to: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
 
 
         for platform in platforms() {
@@ -1731,13 +1753,16 @@ private class BuildSpirvCross: BaseBuild {
 private class BuildPlacebo: BaseBuild {
     init() {
         super.init(library: .libplacebo)
-        // var path = directoryURL + "meson.build"
-        // if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
-        //     str = str.replacingOccurrences(of: "import('python').find_installation()", with: "'/usr/bin/python3'")
-        //     print(str)
-        //     try! str.write(toFile: path.path, atomically: true, encoding: .utf8)
-        // }
-        Utility.shell("git submodule update --init --recursive", currentDirectoryURL: directoryURL)
+        
+        if !FileManager.default.fileExists(atPath: directoryURL.path) {
+            // switch to master branch, to pull newest code
+            try! Utility.launch(path: "/usr/bin/git", arguments: ["remote", "set-branches", "--add", "origin", "master"], currentDirectoryURL: directoryURL)
+            try! Utility.launch(path: "/usr/bin/git", arguments: ["fetch", "origin", "master:master"], currentDirectoryURL: directoryURL)
+            try! Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "master"], currentDirectoryURL: directoryURL)
+
+            // pull all submodules
+            Utility.shell("git submodule update --init --recursive", currentDirectoryURL: directoryURL)
+        }
     }
 
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
@@ -1785,6 +1810,7 @@ private class BuildMPV: BaseBuild {
             "-Diconv=enabled",
             "-Duchardet=enabled",
             "-Dvulkan=enabled",
+            "-Dmoltenvk=enabled",  // from patch option
 
             "-Djavascript=disabled",
             "-Dzimg=disabled",
