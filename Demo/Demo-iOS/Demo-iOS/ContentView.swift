@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  Demo
-//
-//  Created by cxf on 2023/8/5.
-//
-
 import SwiftUI
 
 struct ContentView: View {
@@ -25,7 +18,21 @@ struct ContentView: View {
                         player.coordinator.play(URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
                     } label: {
                         VStack {
-                            Text("web url")
+                            Text("h264")
+                        }.frame(width: 100, height: 100)
+                    }
+                    Button {
+                        player.coordinator.play(URL(string: "https://woolyss.com/f/hevc-aac-caminandes-2.mp4")!)
+                    } label: {
+                        VStack {
+                            Text("h265")
+                        }.frame(width: 100, height: 100)
+                    }
+                    Button {
+                        player.coordinator.play(URL(string: "https://github.com/qiudaomao/MPVColorIssue/raw/master/MPVColorIssue/resources/captain.marvel.2019.2160p.uhd.bluray.x265-terminal.sample.mkv")!)
+                    } label: {
+                        VStack {
+                            Text("HDR")
                         }.frame(width: 100, height: 100)
                     }
                     Button {

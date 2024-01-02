@@ -42,19 +42,18 @@ final class MPVOGLView: NSOpenGLView {
             exit(1)
         }
         
-        // https://github.com/mpv-player/mpv/blob/master/DOCS/man/options.rst
-        // https://github.com/hooke007/MPV_lazy/blob/main/portable_config/mpv.conf
-        checkError(mpv_request_log_messages(mpv, "warn"))
+        // https://mpv.io/manual/stable/#options
+#if DEBUG
+        checkError(mpv_request_log_messages(mpv, "debug"))
+#else
+        checkError(mpv_request_log_messages(mpv, "no"))
+#endif
 #if os(macOS)
         checkError(mpv_set_option_string(mpv, "input-media-keys", "yes"))
 #endif
-        checkError(mpv_set_option_string(mpv, "cache-pause-initial", "yes"))
-        checkError(mpv_set_option_string(mpv, "cache-secs", "120"))
-        checkError(mpv_set_option_string(mpv, "cache-pause-wait", "3"))
-        checkError(mpv_set_option_string(mpv, "keep-open", "yes"))
-        checkError(mpv_set_option_string(mpv, "subs-with-matching-audio", "yes"))
+        checkError(mpv_set_option_string(mpv, "subs-match-os-language", "yes"))
         checkError(mpv_set_option_string(mpv, "subs-fallback", "yes"))
-        checkError(mpv_set_option_string(mpv, "hwdec", machine == "x86_64" ? "no" : "auto-safe"))
+        checkError(mpv_set_option_string(mpv, "hwdec", "auto-safe"))
         checkError(mpv_set_option_string(mpv, "vo", "libmpv"))
         
         checkError(mpv_initialize(mpv))

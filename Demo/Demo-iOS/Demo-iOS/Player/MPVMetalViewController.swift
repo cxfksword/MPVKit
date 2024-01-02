@@ -1,28 +1,147 @@
-//
-//  MPVMetalViewController.swift
-//  Demo-iOS
-//
-//  Created by cxf on 2023/12/24.
-//
-
 import Foundation
 import UIKit
+import MPVKit
 
 final class MPVMetalViewController: UIViewController {
+    var metalLayer = CAMetalLayer()
+    var mpv: OpaquePointer!
+    lazy var queue = DispatchQueue(label: "mpv", qos: .userInitiated)
+    
     var playUrl: URL?
-    var client:MPVClient!
     
     override func viewDidLoad() {
-        super.loadView()
-        self.client = MPVClient()
-        client.create(frame: view.frame)
-        view.layer.addSublayer(client.metalLayer)
         super.viewDidLoad()
+        
+        metalLayer.frame = view.frame
+        metalLayer.contentsScale = UIScreen.main.nativeScale
+        metalLayer.framebufferOnly = true
+        view.layer.addSublayer(metalLayer)
+        
+        setupMpv()
+        
+        if let url = playUrl {
+            loadFile(url)
+        }
     }
+    
+    
+    func setupMpv() {
+        mpv = mpv_create()
+        if mpv == nil {
+            print("failed creating context\n")
+            exit(1)
+        }
+        
+        // https://mpv.io/manual/stable/#options
+#if DEBUG
+        checkError(mpv_request_log_messages(mpv, "debug"))
+#else
+        checkError(mpv_request_log_messages(mpv, "no"))
+#endif
+        checkError(mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &metalLayer))
+        checkError(mpv_set_option_string(mpv, "keep-open", "yes"))
+        checkError(mpv_set_option_string(mpv, "subs-match-os-language", "yes"))
+        checkError(mpv_set_option_string(mpv, "subs-fallback", "yes"))
+        checkError(mpv_set_option_string(mpv, "vo", "gpu-next"))
+        checkError(mpv_set_option_string(mpv, "gpu-api", "vulkan"))
+        checkError(mpv_set_option_string(mpv, "gpu-context", "moltenvk"))
+        checkError(mpv_set_option_string(mpv, "hwdec", "videotoolbox"))
+        
+        checkError(mpv_initialize(mpv))
+        
+        queue.async {
+            mpv_set_wakeup_callback(self.mpv, { (ctx) in
+                let client = unsafeBitCast(ctx, to: MPVViewController.self)
+                client.readEvents()
+            }, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()))
+        }
+    }
+    
     
     func loadFile(
         _ url: URL
     ) {
-        client.loadFile(url)
+        var args = [url.absoluteString]
+        var options = [String]()
+        
+        args.append("replace")
+        
+        if !options.isEmpty {
+            args.append(options.joined(separator: ","))
+        }
+        
+        command("loadfile", args: args)
     }
+    
+    func command(
+        _ command: String,
+        args: [String?] = [],
+        checkForErrors: Bool = true,
+        returnValueCallback: ((Int32) -> Void)? = nil
+    ) {
+        guard mpv != nil else {
+            return
+        }
+        var cargs = makeCArgs(command, args).map { $0.flatMap { UnsafePointer<CChar>(strdup($0)) } }
+        defer {
+            for ptr in cargs where ptr != nil {
+                free(UnsafeMutablePointer(mutating: ptr!))
+            }
+        }
+        print("\(command) -- \(args)")
+        let returnValue = mpv_command(mpv, &cargs)
+        if checkForErrors {
+            checkError(returnValue)
+        }
+        if let cb = returnValueCallback {
+            cb(returnValue)
+        }
+    }
+    
+    private func makeCArgs(_ command: String, _ args: [String?]) -> [String?] {
+        if !args.isEmpty, args.last == nil {
+            fatalError("Command do not need a nil suffix")
+        }
+        
+        var strArgs = args
+        strArgs.insert(command, at: 0)
+        strArgs.append(nil)
+        
+        return strArgs
+    }
+    
+    func readEvents() {
+        queue.async { [self] in
+            while self.mpv != nil {
+                let event = mpv_wait_event(self.mpv, 0)
+                if event?.pointee.event_id == MPV_EVENT_NONE {
+                    break
+                }
+                
+                switch event!.pointee.event_id {
+                case MPV_EVENT_SHUTDOWN:
+                    mpv_terminate_destroy(mpv);
+                    mpv = nil;
+                    break;
+                case MPV_EVENT_LOG_MESSAGE:
+                    let msg = UnsafeMutablePointer<mpv_event_log_message>(OpaquePointer(event!.pointee.data))
+                    print("[\(String(cString: (msg!.pointee.prefix)!))] \(String(cString: (msg!.pointee.level)!)): \(String(cString: (msg!.pointee.text)!))")
+                default:
+                    let eventName = mpv_event_name(event!.pointee.event_id )
+                    print("event: \(String(cString: (eventName)!))");
+                }
+                
+            }
+        }
+    }
+    
+    
+    private func checkError(_ status: CInt) {
+        if status < 0 {
+            print("MPV API error: \(String(cString: mpv_error_string(status)))\n")
+        }
+    }
+    
+    
+    
 }

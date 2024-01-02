@@ -2,13 +2,14 @@ import Foundation
 import GLKit
 import Libmpv
 
-class MPVViewController: GLKViewController {
-    var glView : GLKView!
+class MPVViewController: UIViewController {
+    var glView : MPVOGLView!
     var glContext: EAGLContext!
     private var defaultFBO: GLint = -1
     
     var mpv: OpaquePointer!
     var mpvGL: OpaquePointer!
+    lazy var queue = DispatchQueue(label: "mpv", qos: .userInitiated)
     
     var autoPlay: Bool = true
     var playUrl: URL?
@@ -16,13 +17,25 @@ class MPVViewController: GLKViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        glView = self.view as! GLKView
+        setupUIComponents()
         setupContext()
         setupMpv()
         
         if let url = playUrl, autoPlay {
             loadFile(url)
         }
+    }
+    
+    func setupUIComponents() {
+        glView = MPVOGLView(frame: self.view.frame)
+        self.view.addSubview(glView)
+        glView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            glView.topAnchor.constraint(equalTo: self.view.topAnchor),
+            glView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+            glView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+            glView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor)
+        ])
     }
     
     
@@ -37,9 +50,6 @@ class MPVViewController: GLKViewController {
         if !isSuccess {
             print("setup context fail")
         }
-//        glView.bindDrawable()
-//        glView.isOpaque = true
-//        glView.enableSetNeedsDisplay = false
     }
     
     func setupMpv() {
@@ -49,14 +59,14 @@ class MPVViewController: GLKViewController {
             exit(1)
         }
         
-        // https://github.com/mpv-player/mpv/blob/master/DOCS/man/options.rst
-        // https://github.com/hooke007/MPV_lazy/blob/main/portable_config/mpv.conf
-        checkError(mpv_request_log_messages(mpv, "warn"))
-        checkError(mpv_set_option_string(mpv, "cache-pause-initial", "yes"))
-        checkError(mpv_set_option_string(mpv, "cache-secs", "120"))
-        checkError(mpv_set_option_string(mpv, "cache-pause-wait", "3"))
+        // https://mpv.io/manual/stable/#options
+#if DEBUG
+        checkError(mpv_request_log_messages(mpv, "debug"))
+#else
+        checkError(mpv_request_log_messages(mpv, "no"))
+#endif
         checkError(mpv_set_option_string(mpv, "keep-open", "yes"))
-        checkError(mpv_set_option_string(mpv, "subs-with-matching-audio", "yes"))
+        checkError(mpv_set_option_string(mpv, "subs-match-os-language", "yes"))
         checkError(mpv_set_option_string(mpv, "subs-fallback", "yes"))
         checkError(mpv_set_option_string(mpv, "hwdec", machine == "x86_64" ? "no" : "auto-safe"))
         checkError(mpv_set_option_string(mpv, "vo", "libmpv"))
@@ -84,43 +94,20 @@ class MPVViewController: GLKViewController {
                 exit(1)
             }
             
+            glView.mpvGL = UnsafeMutableRawPointer(mpvGL)
+            mpv_render_context_set_update_callback(
+                mpvGL,
+                glUpdate(_:),
+                UnsafeMutableRawPointer(Unmanaged.passUnretained(glView).toOpaque())
+            )
         }
+        
+        mpv_set_wakeup_callback(self.mpv, { (ctx) in
+                let client = unsafeBitCast(ctx, to: MPVViewController.self)
+                client.readEvents()
+            }, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()))
     }
-    
 
-    
-    override func glkView(_ view: GLKView, drawIn rect: CGRect) {
-        guard let mpvGL else {
-            return
-        }
-
-        // fill black background
-        glClearColor(0, 0, 0, 0)
-        glClear(UInt32(GL_COLOR_BUFFER_BIT))
-        
-        glGetIntegerv(UInt32(GL_FRAMEBUFFER_BINDING), &defaultFBO)
-        
-        var dims: [GLint] = [0, 0, 0, 0]
-        glGetIntegerv(GLenum(GL_VIEWPORT), &dims)
-        
-        var data = mpv_opengl_fbo(
-            fbo: Int32(defaultFBO),
-            w: Int32(dims[2]),
-            h: Int32(dims[3]),
-            internal_format: 0
-        )
-        var flip: CInt = 1
-        withUnsafeMutablePointer(to: &flip) { flip in
-            withUnsafeMutablePointer(to: &data) { data in
-                var params = [
-                    mpv_render_param(type: MPV_RENDER_PARAM_OPENGL_FBO, data: data),
-                    mpv_render_param(type: MPV_RENDER_PARAM_FLIP_Y, data: flip),
-                    mpv_render_param()
-                ]
-                mpv_render_context_render(mpvGL, &params)
-            }
-        }
-    }
     
     
     func loadFile(
@@ -175,6 +162,32 @@ class MPVViewController: GLKViewController {
         return strArgs
     }
     
+    func readEvents() {
+        queue.async { [self] in
+            while self.mpv != nil {
+                let event = mpv_wait_event(self.mpv, 0)
+                if event?.pointee.event_id == MPV_EVENT_NONE {
+                    break
+                }
+   
+                switch event!.pointee.event_id {
+                case MPV_EVENT_SHUTDOWN:
+                    mpv_render_context_free(mpvGL);
+                    mpv_terminate_destroy(mpv);
+                    mpv = nil;
+                    break;
+                case MPV_EVENT_LOG_MESSAGE:
+                    let msg = UnsafeMutablePointer<mpv_event_log_message>(OpaquePointer(event!.pointee.data))
+                    print("[\(String(cString: (msg!.pointee.prefix)!))] \(String(cString: (msg!.pointee.level)!)): \(String(cString: (msg!.pointee.text)!))")
+                default:
+                    let eventName = mpv_event_name(event!.pointee.event_id )
+                    print("event: \(String(cString: (eventName)!))");
+                }
+                 
+            }
+        }
+    }
+    
     
     private func checkError(_ status: CInt) {
         if status < 0 {
@@ -203,7 +216,16 @@ class MPVViewController: GLKViewController {
         return CFBundleGetFunctionPointerForName(identifier, symbolName)
     }
 
-    
-
 }
 
+private func glUpdate(_ ctx: UnsafeMutableRawPointer?) {
+    let glView = unsafeBitCast(ctx, to: MPVOGLView.self)
+    
+    guard glView.needsDrawing else {
+        return
+    }
+    
+    glView.queue.async {
+        glView.display()
+    }
+}
