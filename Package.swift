@@ -90,7 +90,8 @@ let package = Package(
         ),
         .executableTarget(
             name: "build",
-            path: "Plugins/BuildFFmpeg"
+            path: "Plugins/BuildFFmpeg",
+            exclude:["patch"]
         ),
         .executableTarget(
             name: "mpv",
