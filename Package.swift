@@ -39,29 +39,12 @@ let package = Package(
         .target(
             name: "MPVKit",
             dependencies: [
-                "Libavcodec", "Libavdevice", "Libavfilter", "Libavformat", "Libavutil", "Libswresample",
-                "Libswscale", "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz",
-                "Libuchardet", "Libmpv",
-                "MoltenVK", "Libshaderc_combined", "lcms2", "Libplacebo", "Libfontconfig", "Libdovi", "Libunibreak",
-                .target(name: "Libdav1d", condition: .when(platforms: [.macOS, .iOS, .tvOS])),
+                "FFmpegKit", "Libuchardet", "Libmpv",
                 .target(name: "Libbluray", condition: .when(platforms: [.macOS, .macCatalyst])),
-//                "Libsrt",
             ],
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
-                .linkedFramework("AudioToolbox"),
-                .linkedFramework("CoreVideo"),
                 .linkedFramework("CoreAudio"),
-                .linkedFramework("CoreFoundation"),
-                .linkedFramework("CoreMedia"),
-                .linkedFramework("Metal"),
-                .linkedFramework("VideoToolbox"),
-                .linkedLibrary("bz2"),
-                .linkedLibrary("iconv"),
-                .linkedLibrary("expat"),
-                .linkedLibrary("xml2"),
-                .linkedLibrary("z"),
-                .linkedLibrary("c++"),
             ]
         ),
         .target(
@@ -90,24 +73,13 @@ let package = Package(
         ),
         .executableTarget(
             name: "build",
-            path: "Plugins/BuildFFmpeg"
+            path: "Plugins/BuildFFmpeg",
+            exclude:["patch"]
         ),
         .executableTarget(
             name: "mpv",
             path: "Plugins/RunCPlayer"
         ),
-        // .plugin(
-        //     name: "Build FFmpeg",
-        //     capability: .command(
-        //         intent: .custom(
-        //             verb: "build-FFmpeg",
-        //             description: "You can customize FFmpeg and then compile FFmpeg"
-        //         ),
-        //         permissions: [
-        //             .writeToPackageDirectory(reason: "This command compile FFmpeg and generate xcframework. So you need run swift package build-FFmpeg --allow-writing-to-package-directory"),
-        //         ]
-        //     )
-        // ),
         .binaryTarget(
             name: "MoltenVK",
             path: "Sources/MoltenVK.xcframework"

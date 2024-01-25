@@ -8,25 +8,23 @@ do {
 }
 
 private enum Library: String, CaseIterable {
-    case FFmpeg, libfontconfig, libiconv, libunibreak, libfreetype, libfribidi, libharfbuzz, libass, libpng, libbluray, libmpv, openssl, libsrt, libsmbclient, gnutls, gmp, nettle, libbrotli, libuchardet, readline, libglslang, libshaderc, vulkan, lcms2, libdovi, spirvcross, libplacebo, libdav1d, libzvbi
+    case FFmpeg, libfontconfig, libunibreak, libfreetype, libfribidi, libharfbuzz, libass, libpng, libbluray, libmpv, openssl, libsrt, libsmbclient, gnutls, gmp, nettle, libbrotli, libuchardet, readline, libglslang, libshaderc, vulkan, lcms2, libdovi, spirvcross, libplacebo, libdav1d, libzvbi
     var version: String {
         switch self {
         case .libmpv:
             return "v0.37.0"
         case .FFmpeg:
-            return "n6.1"
-        case .libiconv:     // for [libass]
-            return "v1.17"
-        case .libfontconfig:   // for [libass]
+            return "n6.1.1"
+        case .libfontconfig:
             return "2.14.2"
-        case .libunibreak:  // for [libass]
+        case .libunibreak:
             return "libunibreak_5_1"
-        case .libfreetype:  // for [libass]
+        case .libfreetype:
             // VER-2-10-1以上版本需要依赖libbrotli库，或指定--with-brotli=no
             return "VER-2-12-1"
-        case .libfribidi:   // for [libass]
+        case .libfribidi:
             return "v1.0.12"
-        case .libharfbuzz:  // for [libass]
+        case .libharfbuzz:
             return "5.3.1"
         case .libass:       // depend libunibreak libfreetype libfribidi libharfbuzz
             return "0.17.1"
@@ -36,7 +34,7 @@ private enum Library: String, CaseIterable {
             return "openssl-3.2.0"
         case .libsrt:
             return "v1.5.1"
-        case .readline:    // for [libsmbclient]
+        case .readline:
             return "readline-8.2"
         case .libsmbclient:
             return "samba-4.17.5"
@@ -52,18 +50,18 @@ private enum Library: String, CaseIterable {
             return "v0.0.8"
         case .libglslang:
             return "13.1.1"
-        case .libshaderc:  // for [vulkan], compiling GLSL (OpenGL Shading Language) shaders into SPIR-V (Standard Portable Intermediate Representation - Vulkan) code
-            return "v2023.7"
-        case .vulkan:      // depend libshaderc libglslang
-            return "v1.2.6"
-        case .libdovi:     // for [libplacebo], Library to read & write Dolby Vision metadata
+        case .libshaderc:  // compiling GLSL (OpenGL Shading Language) shaders into SPIR-V (Standard Portable Intermediate Representation - Vulkan) code
+            return "v2023.8"
+        case .vulkan:
+            return "v1.2.7"
+        case .libdovi:     // Library to read & write Dolby Vision metadata
             return "libdovi-3.2.0"
-        case .lcms2:    // for [libplacebo]
+        case .lcms2:
             return "lcms2.16"
         case .spirvcross:
             return "vulkan-sdk-1.3.268.0"
-        case .libplacebo:  // depend vulkan lcms2 libdovi, provides a powerful and flexible video rendering framework for media players
-            return "v6.338.1"
+        case .libplacebo:  // depend vulkan lcms2 libdovi libshaderc, provides a powerful and flexible video rendering framework for mpv
+            return "v6.338.2"
         case .libdav1d:    // AV1 decoding
             return "1.3.0"
         case .libzvbi:     // teletext support
@@ -75,8 +73,6 @@ private enum Library: String, CaseIterable {
 
     var url: String {
         switch self {
-        case .libiconv:
-            return "https://github.com/roboticslibrary/libiconv"
         case .libpng:
             return "https://github.com/glennrp/libpng"
         case .libmpv:
@@ -169,7 +165,6 @@ enum BuildFFmpeg {
         }
         if arguments.firstIndex(of: "enable-libass") != nil {
             // try BuildBrotli().buildALL()
-            // try BuildIconv().buildALL()
             try BuildUnibreak().buildALL()
             try BuildFontconfig().buildALL()
             try BuildFreetype().buildALL()
@@ -210,8 +205,21 @@ private class BaseBuild {
     init(library: Library) {
         self.library = library
         directoryURL = URL.currentDirectory + "\(library.rawValue)-\(library.version)"
+
+        
         if !FileManager.default.fileExists(atPath: directoryURL.path) {
+            // pull code
             try! Utility.launch(path: "/usr/bin/git", arguments: ["-c", "advice.detachedHead=false", "clone", "--depth", "1", "--branch", library.version, library.url, directoryURL.path])
+
+            // apply patch
+            let patch = URL.currentDirectory + "../Plugins/BuildFFmpeg/patch/\(library.rawValue)"
+            if FileManager.default.fileExists(atPath: patch.path) {
+                _ = try? Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "."], currentDirectoryURL: directoryURL)
+                let fileNames = try! FileManager.default.contentsOfDirectory(atPath: patch.path).sorted()
+                for fileName in fileNames {
+                    _ = try? Utility.launch(path: "/usr/bin/git", arguments: ["apply", "\((patch + fileName).path)"], currentDirectoryURL: directoryURL)
+                }
+            }
         }
     }
 
@@ -1268,60 +1276,6 @@ private class BuildPng: BaseBuild {
 }
 
 
-
-private class BuildIconv: BaseBuild {
-    init() {
-        super.init(library: .libiconv)
-        try! Utility.launch(executableURL: directoryURL + "gitsub.sh", arguments: ["pull", "--depth", "1"], currentDirectoryURL: directoryURL)
-        if Utility.shell("which groff") == nil {
-            Utility.shell("brew install groff")
-        }
-    }
-
-    override func build(platform: PlatformType, arch: ArchType) throws {
-        try super.build(platform: platform, arch: arch)
-
-        let prefix = thinDir(platform: platform, arch: arch)
-        let version = self.library.version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
-        let pcDir = prefix + "/lib/pkgconfig"
-        try? FileManager.default.removeItem(at: pcDir)
-        try? FileManager.default.createDirectory(at: pcDir, withIntermediateDirectories: true, attributes: nil)
-        let pc = pcDir + "libiconv.pc"
-
-        let content = """
-        prefix=\(prefix.path)
-        includedir=${prefix}/include
-        libdir=${prefix}/lib
-
-        Name: libiconv
-        Description: Library for convert from/to Unicode
-        Version: \(version)
-        Libs: -L${libdir} -liconv
-        Cflags: -I${includedir}
-        """
-        FileManager.default.createFile(atPath: pc.path, contents: content.data(using: .utf8), attributes: nil)
-    }
-
-    override func arguments(platform : PlatformType, arch : ArchType) -> [String] {
-        [
-            "--enable-extra-encodings",
-            "--with-pic",
-            "--disable-test",
-            "--disable-profile",
-            "--enable-static",
-            "--disable-shared",
-            "--disable-fast-install",
-            "--disable-dependency-tracking",
-            "--host=\(platform.host(arch: arch))",
-        ]
-    }
-
-    override func frameworks() throws -> [String] {
-        // ignore generate xci framework
-        return []
-    }
-}
-
 private class BuildASS: BaseBuild {
     init() {
         super.init(library: .libass)
@@ -1562,7 +1516,7 @@ private class BuildDovi: BaseBuild {
     }
 
     override func buildALL() throws {
-        // 清空旧目录
+        // clear old build files
         try? FileManager.default.removeItem(at: URL.currentDirectory + self.library.rawValue)
         try? FileManager.default.removeItem(at: URL.currentDirectory + "../Sources/Libdovi.xcframework")
 
@@ -1615,9 +1569,18 @@ private class BuildDovi: BaseBuild {
 private class BuildVulkan: BaseBuild {
     init() {
         super.init(library: .vulkan)
+
+        // // switch to main branch, to pull newest code
+        // if !FileManager.default.fileExists(atPath: directoryURL.path) {
+        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["remote", "set-branches", "--add", "origin", "main"], currentDirectoryURL: directoryURL)
+        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["fetch", "origin", "main:main"], currentDirectoryURL: directoryURL)
+        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "main"], currentDirectoryURL: directoryURL)
+        // }
     }
 
     override func buildALL() throws {
+        // // build from source code
+        // let version = self.library.version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
         // var arguments = platforms().map {
         //     "--\($0.name)"
         // }
@@ -1731,12 +1694,15 @@ private class BuildSpirvCross: BaseBuild {
 private class BuildPlacebo: BaseBuild {
     init() {
         super.init(library: .libplacebo)
-        // var path = directoryURL + "meson.build"
-        // if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
-        //     str = str.replacingOccurrences(of: "import('python').find_installation()", with: "'/usr/bin/python3'")
-        //     print(str)
-        //     try! str.write(toFile: path.path, atomically: true, encoding: .utf8)
+        
+        // // switch to master branch, to pull newest code
+        // if !FileManager.default.fileExists(atPath: directoryURL.path) {
+        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["remote", "set-branches", "--add", "origin", "master"], currentDirectoryURL: directoryURL)
+        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["fetch", "origin", "master:master"], currentDirectoryURL: directoryURL)
+        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "master"], currentDirectoryURL: directoryURL)
         // }
+
+        // pull all submodules
         Utility.shell("git submodule update --init --recursive", currentDirectoryURL: directoryURL)
     }
 
@@ -1785,12 +1751,14 @@ private class BuildMPV: BaseBuild {
             "-Diconv=enabled",
             "-Duchardet=enabled",
             "-Dvulkan=enabled",
+            "-Dmoltenvk=enabled",  // from patch option
 
             "-Djavascript=disabled",
             "-Dzimg=disabled",
             "-Djpeg=disabled",
             "-Dvapoursynth=disabled",
             "-Drubberband=disabled",
+            "-Dlua=disabled",   // macos show video stats need enable 
         ]
         let blurayLibPath = URL.currentDirectory + [Library.libbluray.rawValue, platform.rawValue, "thin", arch.rawValue]
         if FileManager.default.fileExists(atPath: blurayLibPath.path) {
@@ -1807,12 +1775,10 @@ private class BuildMPV: BaseBuild {
             array.append("-Dcoreaudio=enabled")
             array.append("-Dgl-cocoa=enabled")
             array.append("-Dvideotoolbox-gl=enabled")
-            array.append("-Dlua=enabled")  // for show video stats information
         } else {
             array.append("-Dvideotoolbox-gl=disabled")
             array.append("-Dswift-build=disabled")
             array.append("-Daudiounit=enabled")
-            array.append("-Dlua=disabled")
             if platform == .maccatalyst {
                 array.append("-Dcocoa=disabled")
                 array.append("-Dcoreaudio=disabled")

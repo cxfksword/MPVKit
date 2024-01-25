@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F405D5452B415A4900DB780E /* MPVMetalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F405D5442B415A4900DB780E /* MPVMetalViewController.swift */; };
+		F49050C52B43B07300683EA6 /* MPVOGLView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F49050C42B43B07300683EA6 /* MPVOGLView.swift */; };
+		F49796712B42A42B009FEB5B /* MPVMetalPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F49796702B42A42B009FEB5B /* MPVMetalPlayerView.swift */; };
 		F4A1F01B2A84EFE2004E91B7 /* Demo_iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A1F01A2A84EFE2004E91B7 /* Demo_iOSApp.swift */; };
 		F4A1F01D2A84EFE2004E91B7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A1F01C2A84EFE2004E91B7 /* ContentView.swift */; };
 		F4A1F01F2A84EFE3004E91B7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F4A1F01E2A84EFE3004E91B7 /* Assets.xcassets */; };
@@ -16,11 +19,12 @@
 		F4A1F02F2A84F20F004E91B7 /* MPVKit in Frameworks */ = {isa = PBXBuildFile; productRef = F4A1F02E2A84F20F004E91B7 /* MPVKit */; };
 		F4A1F0332A84F2CE004E91B7 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4A1F0322A84F2CE004E91B7 /* AVFoundation.framework */; };
 		F4A1F0352A84F2D4004E91B7 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4A1F0342A84F2D4004E91B7 /* CoreAudio.framework */; };
-		F4BE94222B3808D500A4A1C7 /* MPVClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4BE94212B3808D500A4A1C7 /* MPVClient.swift */; };
-		F4BE94242B3809C100A4A1C7 /* MPVMetalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4BE94232B3809C100A4A1C7 /* MPVMetalViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F405D5442B415A4900DB780E /* MPVMetalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MPVMetalViewController.swift; sourceTree = "<group>"; };
+		F49050C42B43B07300683EA6 /* MPVOGLView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MPVOGLView.swift; sourceTree = "<group>"; };
+		F49796702B42A42B009FEB5B /* MPVMetalPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MPVMetalPlayerView.swift; sourceTree = "<group>"; };
 		F4A1F0172A84EFE2004E91B7 /* Demo-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Demo-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4A1F01A2A84EFE2004E91B7 /* Demo_iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Demo_iOSApp.swift; sourceTree = "<group>"; };
 		F4A1F01C2A84EFE2004E91B7 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -32,8 +36,6 @@
 		F4A1F0322A84F2CE004E91B7 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		F4A1F0342A84F2D4004E91B7 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		F4A1F0362A84F398004E91B7 /* MPVKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = MPVKit; path = ../..; sourceTree = "<group>"; };
-		F4BE94212B3808D500A4A1C7 /* MPVClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MPVClient.swift; sourceTree = "<group>"; };
-		F4BE94232B3809C100A4A1C7 /* MPVMetalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MPVMetalViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,10 +94,11 @@
 		F4A1F0282A84F022004E91B7 /* Player */ = {
 			isa = PBXGroup;
 			children = (
+				F49050C42B43B07300683EA6 /* MPVOGLView.swift */,
 				F4A1F0292A84F022004E91B7 /* MPVViewController.swift */,
 				F4A1F02A2A84F022004E91B7 /* MPVPlayerView.swift */,
-				F4BE94212B3808D500A4A1C7 /* MPVClient.swift */,
-				F4BE94232B3809C100A4A1C7 /* MPVMetalViewController.swift */,
+				F405D5442B415A4900DB780E /* MPVMetalViewController.swift */,
+				F49796702B42A42B009FEB5B /* MPVMetalPlayerView.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -185,12 +188,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F4BE94242B3809C100A4A1C7 /* MPVMetalViewController.swift in Sources */,
-				F4BE94222B3808D500A4A1C7 /* MPVClient.swift in Sources */,
+				F405D5452B415A4900DB780E /* MPVMetalViewController.swift in Sources */,
 				F4A1F01D2A84EFE2004E91B7 /* ContentView.swift in Sources */,
 				F4A1F02C2A84F022004E91B7 /* MPVPlayerView.swift in Sources */,
 				F4A1F01B2A84EFE2004E91B7 /* Demo_iOSApp.swift in Sources */,
 				F4A1F02B2A84F022004E91B7 /* MPVViewController.swift in Sources */,
+				F49050C52B43B07300683EA6 /* MPVOGLView.swift in Sources */,
+				F49796712B42A42B009FEB5B /* MPVMetalPlayerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

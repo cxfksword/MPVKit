@@ -1,17 +1,10 @@
-//
-//  ContentView.swift
-//  Demo-macOS
-//
-//  Created by cxf on 2023/8/7.
-//
-
 import SwiftUI
 
 struct ContentView: View {
-    let player : MPVPlayerView!
+    let player : MPVMetalPlayerView!
     
     init() {
-        player = MPVPlayerView(playUrl: URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
+        player = MPVMetalPlayerView(playUrl: URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
     }
     
     var body: some View {
@@ -21,15 +14,31 @@ struct ContentView: View {
                     player.coordinator.play(URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
                 } label: {
                     HStack {
-                        Text("web url")
+                        Text("h264")
                         Spacer()
                     }
                 }
                 Button {
-                    player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/subrip.mkv")!)
+                    player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/h265.mp4")!)
                 } label: {
                     HStack {
-                        Text("subrip")
+                        Text("h265")
+                        Spacer()
+                    }
+                }
+                Button {
+                    player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/hdr.mkv")!)
+                } label: {
+                    HStack {
+                        Text("HDR")
+                        Spacer()
+                    }
+                }
+                Button {
+                    player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/pgs_subtitle.mkv")!)
+                } label: {
+                    HStack {
+                        Text("subtitle")
                         Spacer()
                     }
                 }

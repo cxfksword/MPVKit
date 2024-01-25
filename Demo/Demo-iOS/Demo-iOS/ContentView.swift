@@ -1,17 +1,10 @@
-//
-//  ContentView.swift
-//  Demo
-//
-//  Created by cxf on 2023/8/5.
-//
-
 import SwiftUI
 
 struct ContentView: View {
-    let player : MPVPlayerView!
+    let player : MPVMetalPlayerView!
     
     init() {
-        player = MPVPlayerView(playUrl: URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
+        player = MPVMetalPlayerView(playUrl: URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
     }
     
     
@@ -25,22 +18,36 @@ struct ContentView: View {
                         player.coordinator.play(URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
                     } label: {
                         VStack {
-                            Text("web url")
-                        }.frame(width: 100, height: 100)
+                            Text("h264")
+                        }.frame(width: 130, height: 100)
                     }
                     Button {
-                        player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/subrip.mkv")!)
+                        player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/h265.mp4")!)
                     } label: {
                         VStack {
-                            Text("subrip")
-                        }.frame(width: 100, height: 100)
+                            Text("h265")
+                        }.frame(width: 130, height: 100)
+                    }
+                    Button {
+                        player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/hdr.mkv")!)
+                    } label: {
+                        VStack {
+                            Text("HDR")
+                        }.frame(width: 130, height: 100)
+                    }
+                    Button {
+                        player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/pgs_subtitle.mkv")!)
+                    } label: {
+                        VStack {
+                            Text("subtitle")
+                        }.frame(width: 130, height: 100)
                     }
                     Button {
                         player.coordinator.play(URL(string: "https://github.com/cxfksword/video-test/raw/master/resources/rmvb.rm")!)
                     } label: {
                         VStack {
                             Text("rmvb")
-                        }.frame(width: 100, height: 100)
+                        }.frame(width: 130, height: 100)
                     }
                 }
             }

@@ -1,6 +1,6 @@
 # MPVKit
 
-[![ffmpeg](https://img.shields.io/badge/ffmpeg-n6.1-blue.svg)](https://github.com/FFmpeg/FFmpeg)
+[![ffmpeg](https://img.shields.io/badge/ffmpeg-n6.1.1-blue.svg)](https://github.com/FFmpeg/FFmpeg)
 [![mpv](https://img.shields.io/badge/mpv-v0.37.0-blue.svg)](https://github.com/mpv-player/mpv)
 [![license](https://img.shields.io/github/license/cxfksword/MPVKit)](https://github.com/cxfksword/MPVKit/main/LICENSE)
 
@@ -14,7 +14,7 @@ Ported from [kingslay/FFmpegKit](https://github.com/kingslay/FFmpegKit)
 
 ## Installation
 
-### SwiftPM
+### Swift Package Manager
 
 ```
 https://github.com/cxfksword/MPVKit.git
@@ -34,4 +34,6 @@ swift run mpv --script-opts=osc-visibility=always [url]
 swift run mpv --list-options
 ```
 
+<!--
 > Use <kbd>Shift</kbd>+<kbd>i</kbd> to show stats overlay
+-->

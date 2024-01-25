@@ -15,6 +15,8 @@
 		F437699E2A80A92700E35E7E /* MPVKit in Frameworks */ = {isa = PBXBuildFile; productRef = F437699D2A80A92700E35E7E /* MPVKit */; };
 		F43769AA2A80C67F00E35E7E /* MPVOGLView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43769A92A80C67F00E35E7E /* MPVOGLView.swift */; };
 		F43769B52A80E00800E35E7E /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F43769B42A80E00800E35E7E /* CoreAudio.framework */; };
+		F4EB5D062B61541C00486E3F /* MPVMetalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4EB5D052B61541C00486E3F /* MPVMetalViewController.swift */; };
+		F4EB5D082B61543700486E3F /* MPVMetalPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4EB5D072B61543700486E3F /* MPVMetalPlayerView.swift */; };
 		F4FC2C702A84C2AA00795829 /* MPVViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FC2C6F2A84C2AA00795829 /* MPVViewController.swift */; };
 /* End PBXBuildFile section */
 
@@ -33,6 +35,8 @@
 		F43769B22A80DFF400E35E7E /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		F43769B42A80E00800E35E7E /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		F4A1F0372A84F52B004E91B7 /* MPVKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = MPVKit; path = ../..; sourceTree = "<group>"; };
+		F4EB5D052B61541C00486E3F /* MPVMetalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MPVMetalViewController.swift; sourceTree = "<group>"; };
+		F4EB5D072B61543700486E3F /* MPVMetalPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MPVMetalPlayerView.swift; sourceTree = "<group>"; };
 		F4FC2C6F2A84C2AA00795829 /* MPVViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MPVViewController.swift; sourceTree = "<group>"; };
 		F4FC2C712A84EE7800795829 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -96,6 +100,8 @@
 				F43769992A80A42F00E35E7E /* MPVPlayerView.swift */,
 				F43769A92A80C67F00E35E7E /* MPVOGLView.swift */,
 				F4FC2C6F2A84C2AA00795829 /* MPVViewController.swift */,
+				F4EB5D052B61541C00486E3F /* MPVMetalViewController.swift */,
+				F4EB5D072B61543700486E3F /* MPVMetalPlayerView.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -188,10 +194,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F4EB5D062B61541C00486E3F /* MPVMetalViewController.swift in Sources */,
 				F4FC2C702A84C2AA00795829 /* MPVViewController.swift in Sources */,
 				F437698A2A80A39200E35E7E /* ContentView.swift in Sources */,
 				F437699B2A80A42F00E35E7E /* MPVPlayerView.swift in Sources */,
 				F43769AA2A80C67F00E35E7E /* MPVOGLView.swift in Sources */,
+				F4EB5D082B61543700486E3F /* MPVMetalPlayerView.swift in Sources */,
 				F43769882A80A39200E35E7E /* Demo_macOSApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

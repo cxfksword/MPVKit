@@ -6,7 +6,7 @@ import MPVKit
 final class MPVOGLView: NSOpenGLView {
     var mpv: OpaquePointer!
     var mpvGL: OpaquePointer!
-    var queue: DispatchQueue = DispatchQueue(label: "mpv", qos: .userInteractive)
+    var queue = DispatchQueue(label: "mpv", qos: .userInteractive)
     private var defaultFBO: GLint = -1
     
     override class func defaultPixelFormat() -> NSOpenGLPixelFormat {
@@ -42,19 +42,18 @@ final class MPVOGLView: NSOpenGLView {
             exit(1)
         }
         
-        // https://github.com/mpv-player/mpv/blob/master/DOCS/man/options.rst
-        // https://github.com/hooke007/MPV_lazy/blob/main/portable_config/mpv.conf
-        checkError(mpv_request_log_messages(mpv, "warn"))
+        // https://mpv.io/manual/stable/#options
+#if DEBUG
+        checkError(mpv_request_log_messages(mpv, "debug"))
+#else
+        checkError(mpv_request_log_messages(mpv, "no"))
+#endif
 #if os(macOS)
         checkError(mpv_set_option_string(mpv, "input-media-keys", "yes"))
 #endif
-        checkError(mpv_set_option_string(mpv, "cache-pause-initial", "yes"))
-        checkError(mpv_set_option_string(mpv, "cache-secs", "120"))
-        checkError(mpv_set_option_string(mpv, "cache-pause-wait", "3"))
-        checkError(mpv_set_option_string(mpv, "keep-open", "yes"))
-        checkError(mpv_set_option_string(mpv, "subs-with-matching-audio", "yes"))
+        checkError(mpv_set_option_string(mpv, "subs-match-os-language", "yes"))
         checkError(mpv_set_option_string(mpv, "subs-fallback", "yes"))
-        checkError(mpv_set_option_string(mpv, "hwdec", machine == "x86_64" ? "no" : "auto-safe"))
+        checkError(mpv_set_option_string(mpv, "hwdec", "auto-safe"))
         checkError(mpv_set_option_string(mpv, "vo", "libmpv"))
         
         checkError(mpv_initialize(mpv))
@@ -67,8 +66,6 @@ final class MPVOGLView: NSOpenGLView {
             },
             get_proc_address_ctx: nil
         )
-        
-        queue = DispatchQueue(label: "mpv", qos: .userInteractive)
         
         withUnsafeMutablePointer(to: &initParams) { initParams in
             var params = [
@@ -90,9 +87,7 @@ final class MPVOGLView: NSOpenGLView {
         
         }
         
-        queue.async {
-            mpv_set_wakeup_callback(self.mpv, mpvWakeUp, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()))
-        }
+        mpv_set_wakeup_callback(self.mpv, mpvWakeUp, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()))
     }
     
     
@@ -126,7 +121,7 @@ final class MPVOGLView: NSOpenGLView {
                 free(UnsafeMutablePointer(mutating: ptr!))
             }
         }
-        print("\(command) -- \(args)")
+        //print("\(command) -- \(args)")
         let returnValue = mpv_command(mpv, &cargs)
         if checkForErrors {
             checkError(returnValue)
@@ -165,7 +160,7 @@ final class MPVOGLView: NSOpenGLView {
                     break;
                 case MPV_EVENT_LOG_MESSAGE:
                     let msg = UnsafeMutablePointer<mpv_event_log_message>(OpaquePointer(event!.pointee.data))
-                    print("[\(String(cString: (msg!.pointee.prefix)!))] \(String(cString: (msg!.pointee.level)!)): \(String(cString: (msg!.pointee.text)!))")
+                    print("[\(String(cString: (msg!.pointee.prefix)!))] \(String(cString: (msg!.pointee.level)!)): \(String(cString: (msg!.pointee.text)!))", terminator: "")
                 default:
                     let eventName = mpv_event_name(event!.pointee.event_id )
                     print("event: \(String(cString: (eventName)!))");

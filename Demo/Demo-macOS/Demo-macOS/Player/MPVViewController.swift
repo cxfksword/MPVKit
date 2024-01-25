@@ -1,11 +1,8 @@
-
 import Foundation
 import AppKit
 
 class MPVViewController: NSViewController {
     var glView : MPVOGLView!
-    
-    var autoPlay: Bool = true
     var playUrl: URL?
     
     override func loadView() {
@@ -22,7 +19,7 @@ class MPVViewController: NSViewController {
         self.glView.setupContext()
         self.glView.setupMpv()
      
-        if let url = playUrl, autoPlay {
+        if let url = playUrl {
             self.glView.loadFile(url)
         }
     }
