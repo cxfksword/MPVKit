@@ -8,7 +8,7 @@ do {
 }
 
 private enum Library: String, CaseIterable {
-    case FFmpeg, libfontconfig, libunibreak, libfreetype, libfribidi, libharfbuzz, libass, libpng, libbluray, libmpv, openssl, libsrt, libsmbclient, gnutls, gmp, nettle, libbrotli, libuchardet, readline, libglslang, libshaderc, vulkan, lcms2, libdovi, spirvcross, libplacebo, libdav1d, libzvbi
+    case FFmpeg, libfontconfig, libunibreak, libfreetype, libfribidi, libharfbuzz, libass, libpng, libbluray, libmpv, openssl, libsrt, libsmbclient, gnutls, gmp, nettle, libbrotli, libuchardet, readline, libglslang, libshaderc, vulkan, lcms2, libdovi, spirvcross, libplacebo, libdav1d, libzvbi, libluajit
     var version: String {
         switch self {
         case .libmpv:
@@ -68,6 +68,8 @@ private enum Library: String, CaseIterable {
             return "v0.2.42"
         case .libbluray:
             return "1.3.4"
+        case .libluajit:
+            return "v2.1"
         }
     }
 
@@ -117,6 +119,8 @@ private enum Library: String, CaseIterable {
             return "https://github.com/KhronosGroup/SPIRV-Cross"
         case .libbluray:
             return "https://code.videolan.org/videolan/libbluray.git"
+        case .libluajit:
+            return "https://github.com/LuaJIT/LuaJIT.git"
         default:
             var value = rawValue
             if value.hasPrefix("lib") {
@@ -192,6 +196,7 @@ enum BuildFFmpeg {
         if arguments.firstIndex(of: "enable-mpv") != nil {
             try BuildUchardet().buildALL()
             try BuildBluray().buildALL()
+            try BuildLuaJIT().buildALL()
             try BuildMPV().buildALL()
         }
     }
@@ -558,12 +563,6 @@ private class BuildFFMPEG: BaseBuild {
         let lldbFile = URL.currentDirectory + "LLDBInitFile"
         try? FileManager.default.removeItem(at: lldbFile)
         FileManager.default.createFile(atPath: lldbFile.path, contents: nil, attributes: nil)
-        let path = directoryURL + "libavcodec/videotoolbox.c"
-        if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
-            str = str.replacingOccurrences(of: "kCVPixelBufferOpenGLESCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
-            str = str.replacingOccurrences(of: "kCVPixelBufferIOSurfaceOpenGLTextureCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
-            try! str.write(toFile: path.path, atomically: true, encoding: .utf8)
-        }
     }
 
     override func frameworks() throws -> [String] {
@@ -1342,6 +1341,50 @@ private class BuildBluray: BaseBuild {
     }
 }
 
+private class BuildLuaJIT: BaseBuild {
+    init() {
+        super.init(library: .libluajit)
+    }
+
+    override func build(platform: PlatformType, arch: ArchType) throws {
+        // maccatalyst暂时不支持
+        if platform == .maccatalyst {
+            return
+        }
+        let buildURL = scratch(platform: platform, arch: arch)
+        try? FileManager.default.createDirectory(at: buildURL, withIntermediateDirectories: true, attributes: nil)
+        var environ = [String: String]()
+        var arguments = [
+            "PREFIX=\(thinDir(platform: platform, arch: arch).path)"
+        ]
+
+        if platform == .macos {
+            environ["MACOSX_DEPLOYMENT_TARGET"] = "10.15"
+            arguments += [
+                "TARGET_CFLAGS=--target=\(arch.rawValue)-apple-darwin",
+                "TARGET_LDFLAGS=--target=\(arch.rawValue)-apple-darwin",
+                "HOST_CFLAGS=--target=x86_64-apple-darwin",
+                "HOST_LDFLAGS=--target=x86_64-apple-darwin",
+            ]
+        } else {
+            environ["TARGET_FLAGS"] = "-arch \(arch.rawValue) -isysroot \(platform.isysroot)"
+            arguments += [
+                "DEFAULT_CC=clang",
+                "CROSS=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/",
+                "TARGET_SYS=iOS",
+            ]
+        }
+        
+        try Utility.launch(path: "/usr/bin/make", arguments: ["clean"] + arguments, currentDirectoryURL: directoryURL, environment: environ)
+        try Utility.launch(path: "/usr/bin/make", arguments: ["-j8"] + arguments, currentDirectoryURL: directoryURL, environment: environ)
+        try Utility.launch(path: "/usr/bin/make", arguments: ["-j8", "install"] + arguments, currentDirectoryURL:  directoryURL, environment: environ)
+    }
+
+    override func frameworks() throws -> [String] {
+        ["libluajit-5.1"]
+    }
+}
+
 
 private class BuildUchardet: BaseBuild {
     init() {
@@ -1571,11 +1614,9 @@ private class BuildVulkan: BaseBuild {
         super.init(library: .vulkan)
 
         // // switch to main branch, to pull newest code
-        // if !FileManager.default.fileExists(atPath: directoryURL.path) {
-        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["remote", "set-branches", "--add", "origin", "main"], currentDirectoryURL: directoryURL)
-        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["fetch", "origin", "main:main"], currentDirectoryURL: directoryURL)
-        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "main"], currentDirectoryURL: directoryURL)
-        // }
+        // try! Utility.launch(path: "/usr/bin/git", arguments: ["remote", "set-branches", "--add", "origin", "main"], currentDirectoryURL: directoryURL)
+        // try! Utility.launch(path: "/usr/bin/git", arguments: ["fetch", "origin", "main:main"], currentDirectoryURL: directoryURL)
+        // try! Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "main"], currentDirectoryURL: directoryURL)
     }
 
     override func buildALL() throws {
@@ -1696,11 +1737,9 @@ private class BuildPlacebo: BaseBuild {
         super.init(library: .libplacebo)
         
         // // switch to master branch, to pull newest code
-        // if !FileManager.default.fileExists(atPath: directoryURL.path) {
-        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["remote", "set-branches", "--add", "origin", "master"], currentDirectoryURL: directoryURL)
-        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["fetch", "origin", "master:master"], currentDirectoryURL: directoryURL)
-        //     try! Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "master"], currentDirectoryURL: directoryURL)
-        // }
+        // try! Utility.launch(path: "/usr/bin/git", arguments: ["remote", "set-branches", "--add", "origin", "master"], currentDirectoryURL: directoryURL)
+        // try! Utility.launch(path: "/usr/bin/git", arguments: ["fetch", "origin", "master:master"], currentDirectoryURL: directoryURL)
+        // try! Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "master"], currentDirectoryURL: directoryURL)
 
         // pull all submodules
         Utility.shell("git submodule update --init --recursive", currentDirectoryURL: directoryURL)
@@ -1758,7 +1797,6 @@ private class BuildMPV: BaseBuild {
             "-Djpeg=disabled",
             "-Dvapoursynth=disabled",
             "-Drubberband=disabled",
-            "-Dlua=disabled",   // macos show video stats need enable 
         ]
         let blurayLibPath = URL.currentDirectory + [Library.libbluray.rawValue, platform.rawValue, "thin", arch.rawValue]
         if FileManager.default.fileExists(atPath: blurayLibPath.path) {
@@ -1775,10 +1813,12 @@ private class BuildMPV: BaseBuild {
             array.append("-Dcoreaudio=enabled")
             array.append("-Dgl-cocoa=enabled")
             array.append("-Dvideotoolbox-gl=enabled")
+            array.append("-Dlua=luajit")  // macos show video stats need enable 
         } else {
             array.append("-Dvideotoolbox-gl=disabled")
             array.append("-Dswift-build=disabled")
             array.append("-Daudiounit=enabled")
+            array.append("-Dlua=disabled")
             if platform == .maccatalyst {
                 array.append("-Dcocoa=disabled")
                 array.append("-Dcoreaudio=disabled")

@@ -20,6 +20,7 @@ final class MPVMetalViewController: NSViewController {
         metalLayer.frame = view.frame
         metalLayer.contentsScale = NSScreen.main!.backingScaleFactor
         metalLayer.framebufferOnly = true
+        metalLayer.wantsExtendedDynamicRangeContent = true
         view.layer!.addSublayer(metalLayer)
         
         setupMpv()

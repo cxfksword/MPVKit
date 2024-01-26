@@ -4,7 +4,7 @@ struct ContentView: View {
     let player : MPVMetalPlayerView!
     
     init() {
-        player = MPVMetalPlayerView(playUrl: URL(string: "https://vjs.zencdn.net/v/oceans.mp4")!)
+        player = MPVMetalPlayerView(playUrl: URL(string: "https://github.com/haasn/hdr-tests/raw/master/colorbars.mp4")!)
     }
     
     var body: some View {

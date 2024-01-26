@@ -41,6 +41,7 @@ let package = Package(
             dependencies: [
                 "FFmpegKit", "Libuchardet", "Libmpv",
                 .target(name: "Libbluray", condition: .when(platforms: [.macOS, .macCatalyst])),
+                .target(name: "Libluajit", condition: .when(platforms: [.macOS])),
             ],
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
@@ -175,6 +176,10 @@ let package = Package(
         .binaryTarget(
             name: "Libuchardet",
             path: "Sources/Libuchardet.xcframework"
+        ),
+        .binaryTarget(
+            name: "Libluajit",
+            path: "Sources/Libluajit-5.1.xcframework"
         ),
 //        .binaryTarget(
 //            name: "Libsrt",

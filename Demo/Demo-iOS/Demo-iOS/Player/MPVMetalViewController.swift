@@ -17,6 +17,7 @@ final class MPVMetalViewController: UIViewController {
         metalLayer.frame = view.frame
         metalLayer.contentsScale = UIScreen.main.nativeScale
         metalLayer.framebufferOnly = true
+        metalLayer.wantsExtendedDynamicRangeContent = true
         view.layer.addSublayer(metalLayer)
         
         setupMpv()
@@ -51,6 +52,7 @@ final class MPVMetalViewController: UIViewController {
         checkError(mpv_set_option_string(mpv, "gpu-api", "vulkan"))
         //checkError(mpv_set_option_string(mpv, "gpu-context", "moltenvk"))
         checkError(mpv_set_option_string(mpv, "hwdec", "videotoolbox"))
+        //checkError(mpv_set_option_string(mpv, "profile", "fast"))   // can fix frame drop in poor device when play 4k
         
         checkError(mpv_initialize(mpv))
         
