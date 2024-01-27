@@ -1594,7 +1594,7 @@ private class BuildDovi: BaseBuild {
                 libdir=${prefix}/lib/\(platform.rawValue)/thin/\(arch.rawValue)/lib
                 includedir=${prefix}/include
 
-                Name: dovi
+                Name: libdovi
                 Description: Dolby Vision metadata parsing and writing
                 Version: \(version)
                 Libs: -L${libdir} -ldovi
