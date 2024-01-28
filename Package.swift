@@ -87,7 +87,7 @@ let package = Package(
         ),
         .binaryTarget(
             name: "Libshaderc_combined",
-            path: "Sources/libshaderc_combined.xcframework"
+            path: "Sources/Libshaderc_combined.xcframework"
         ),
         .binaryTarget(
             name: "lcms2",
@@ -115,7 +115,7 @@ let package = Package(
         ),
         .binaryTarget(
             name: "Libplacebo",
-            path: "Sources/libplacebo.xcframework"
+            path: "Sources/Libplacebo.xcframework"
         ),
         .binaryTarget(
             name: "Libmpv",
