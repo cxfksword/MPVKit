@@ -1,4 +1,0 @@
-framework module Libluajit-5.1 [system] {
-    umbrella "."
-    export *
-}

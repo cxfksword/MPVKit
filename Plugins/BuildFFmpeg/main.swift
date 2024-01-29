@@ -1344,6 +1344,24 @@ private class BuildBluray: BaseBuild {
 private class BuildLuaJIT: BaseBuild {
     init() {
         super.init(library: .libluajit)
+
+        // remove ABI version, xcframework with ABIVER can't build in swift 5.7.*
+        let makefile = directoryURL + "Makefile"
+        if let data = FileManager.default.contents(atPath: makefile.path), var str = String(data: data, encoding: .utf8) {
+            str = str.replacingOccurrences(of: "-$(ABIVER)", with: "")
+            try! str.write(toFile: makefile.path, atomically: true, encoding: .utf8)
+        }
+        let srcmakefile = directoryURL + "src/Makefile"
+        if let data = FileManager.default.contents(atPath: srcmakefile.path), var str = String(data: data, encoding: .utf8) {
+            str = str.replacingOccurrences(of: "-$(ABIVER)", with: "")
+            try! str.write(toFile: srcmakefile.path, atomically: true, encoding: .utf8)
+        }
+        let pcfile = directoryURL + "etc/luajit.pc"
+        if let data = FileManager.default.contents(atPath: pcfile.path), var str = String(data: data, encoding: .utf8) {
+            str = str.replacingOccurrences(of: "-${abiver}", with: "")
+            try! str.write(toFile: pcfile.path, atomically: true, encoding: .utf8)
+        }
+
     }
 
     override func build(platform: PlatformType, arch: ArchType) throws {
@@ -1381,7 +1399,7 @@ private class BuildLuaJIT: BaseBuild {
     }
 
     override func frameworks() throws -> [String] {
-        ["libluajit-5.1"]
+        ["libluajit"]
     }
 }
 
