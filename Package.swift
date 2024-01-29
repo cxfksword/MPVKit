@@ -179,7 +179,7 @@ let package = Package(
         ),
         .binaryTarget(
             name: "Libluajit",
-            path: "Sources/Libluajit-5.1.xcframework"
+            path: "Sources/Libluajit.xcframework"
         ),
 //        .binaryTarget(
 //            name: "Libsrt",
