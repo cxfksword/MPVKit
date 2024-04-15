@@ -5,7 +5,7 @@
 
 
 #define RPU_PARSER_MAJOR 3
-#define RPU_PARSER_MINOR 2
+#define RPU_PARSER_MINOR 3
 #define RPU_PARSER_PATCH 0
 
 
@@ -712,6 +712,24 @@ int32_t dovi_rpu_set_active_area_offsets(DoviRpuOpaque *ptr,
  * Converts the existing reshaping/mapping to become no-op.
  */
 int32_t dovi_rpu_remove_mapping(DoviRpuOpaque *ptr);
+
+/**
+ * # Safety
+ * The struct pointer must be valid.
+ *
+ * Writes the encoded RPU as `itu_t_t35_payload_bytes` for AV1 ITU-T T.35 metadata OBU
+ * If an error occurs in the writing, it is logged to RpuOpaque.error
+ */
+const DoviData *dovi_write_av1_rpu_metadata_obu_t35_payload(DoviRpuOpaque *ptr);
+
+/**
+ * # Safety
+ * The struct pointer must be valid.
+ *
+ * Writes the encoded RPU a complete AV1 `metadata_itut_t35()` OBU
+ * If an error occurs in the writing, it is logged to RpuOpaque.error
+ */
+const DoviData *dovi_write_av1_rpu_metadata_obu_t35_complete(DoviRpuOpaque *ptr);
 
 #ifdef __cplusplus
 } // extern "C"

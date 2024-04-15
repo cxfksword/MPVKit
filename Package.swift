@@ -54,6 +54,7 @@ let package = Package(
                 "Libavcodec", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
                 "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz",
                 "MoltenVK", "Libshaderc_combined", "lcms2", "Libplacebo", "Libfontconfig", "Libdovi", "Libunibreak",
+                "libsmbclient", "gmp", "nettle", "hogweed", "gnutls",
                 .target(name: "Libdav1d", condition: .when(platforms: [.macOS, .iOS, .tvOS])),
 //                "Libsrt",
             ],
@@ -67,6 +68,7 @@ let package = Package(
                 .linkedLibrary("bz2"),
                 .linkedLibrary("iconv"),
                 .linkedLibrary("expat"),
+                .linkedLibrary("resolv"),
                 .linkedLibrary("xml2"),
                 .linkedLibrary("z"),
                 .linkedLibrary("c++"),
@@ -180,6 +182,26 @@ let package = Package(
         .binaryTarget(
             name: "Libluajit",
             path: "Sources/Libluajit.xcframework"
+        ),
+        .binaryTarget(
+            name: "gmp",
+            path: "Sources/gmp.xcframework"
+        ),
+        .binaryTarget(
+            name: "nettle",
+            path: "Sources/nettle.xcframework"
+        ),
+        .binaryTarget(
+            name: "hogweed",
+            path: "Sources/hogweed.xcframework"
+        ),
+        .binaryTarget(
+            name: "gnutls",
+            path: "Sources/gnutls.xcframework"
+        ),
+        .binaryTarget(
+            name: "libsmbclient",
+            path: "Sources/Libsmbclient.xcframework"
         ),
 //        .binaryTarget(
 //            name: "Libsrt",

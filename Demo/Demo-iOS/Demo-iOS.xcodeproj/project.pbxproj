@@ -94,11 +94,8 @@
 		F4A1F0282A84F022004E91B7 /* Player */ = {
 			isa = PBXGroup;
 			children = (
-				F49050C42B43B07300683EA6 /* MPVOGLView.swift */,
-				F4A1F0292A84F022004E91B7 /* MPVViewController.swift */,
-				F4A1F02A2A84F022004E91B7 /* MPVPlayerView.swift */,
-				F405D5442B415A4900DB780E /* MPVMetalViewController.swift */,
-				F49796702B42A42B009FEB5B /* MPVMetalPlayerView.swift */,
+				F4BA11AF2BCCFF1000B472DE /* OpenGL */,
+				F4BA11B02BCCFF1C00B472DE /* Metal */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -110,6 +107,25 @@
 				F4A1F0322A84F2CE004E91B7 /* AVFoundation.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F4BA11AF2BCCFF1000B472DE /* OpenGL */ = {
+			isa = PBXGroup;
+			children = (
+				F49050C42B43B07300683EA6 /* MPVOGLView.swift */,
+				F4A1F02A2A84F022004E91B7 /* MPVPlayerView.swift */,
+				F4A1F0292A84F022004E91B7 /* MPVViewController.swift */,
+			);
+			path = OpenGL;
+			sourceTree = "<group>";
+		};
+		F4BA11B02BCCFF1C00B472DE /* Metal */ = {
+			isa = PBXGroup;
+			children = (
+				F49796702B42A42B009FEB5B /* MPVMetalPlayerView.swift */,
+				F405D5442B415A4900DB780E /* MPVMetalViewController.swift */,
+			);
+			path = Metal;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

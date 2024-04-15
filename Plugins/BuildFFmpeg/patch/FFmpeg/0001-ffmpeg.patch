@@ -1,11 +1,15 @@
-diff --git a/libavcodec/videotoolbox.c b/libavcodec/videotoolbox.c
-index 43fd2e3fe..d5da601a1 100644
---- a/libavcodec/videotoolbox.c
-+++ b/libavcodec/videotoolbox.c
-@@ -784,8 +784,10 @@ static CFDictionaryRef videotoolbox_buffer_attributes_create(int width,
+diff --git forkSrcPrefix/libavcodec/videotoolbox.c forkDstPrefix/libavcodec/videotoolbox.c
+index f4da80640de01ffd46f03cbd276ddcd9d053b6ce..776fbbfad2b39c51f8afc29bffb408dbaaaddcd5 100644
+--- forkSrcPrefix/libavcodec/videotoolbox.c
++++ forkDstPrefix/libavcodec/videotoolbox.c
+@@ -786,9 +786,13 @@ static CFDictionaryRef videotoolbox_buffer_attributes_create(int width,
+     CFDictionarySetValue(buffer_attributes, kCVPixelBufferIOSurfacePropertiesKey, io_surface_properties);
      CFDictionarySetValue(buffer_attributes, kCVPixelBufferWidthKey, w);
      CFDictionarySetValue(buffer_attributes, kCVPixelBufferHeightKey, h);
- #if TARGET_OS_IPHONE
+-#if TARGET_OS_IPHONE
++#if TARGET_OS_MACCATALYST
++    CFDictionarySetValue(buffer_attributes, kCVPixelBufferMetalCompatibilityKey, kCFBooleanTrue);
++#elif TARGET_OS_IPHONE
 +    CFDictionarySetValue(buffer_attributes, kCVPixelBufferMetalCompatibilityKey, kCFBooleanTrue);
      CFDictionarySetValue(buffer_attributes, kCVPixelBufferOpenGLESCompatibilityKey, kCFBooleanTrue);
  #else

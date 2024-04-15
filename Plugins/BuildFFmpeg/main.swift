@@ -14,7 +14,7 @@ private enum Library: String, CaseIterable {
         case .libmpv:
             return "v0.37.0"
         case .FFmpeg:
-            return "n6.1.1"
+            return "n7.0"
         case .libfontconfig:
             return "2.14.2"
         case .libunibreak:
@@ -37,11 +37,11 @@ private enum Library: String, CaseIterable {
         case .readline:
             return "readline-8.2"
         case .libsmbclient:
-            return "samba-4.17.5"
+            return "samba-4.15.13"
         case .gnutls:
-            return "3.7.8"
+            return "3.8.3"
         case .nettle:
-            return "nettle_3.8.1_release_20220727"
+            return "nettle_3.9.1_release_20230601"
         case .gmp:
             return "v6.2.1"
         case .libbrotli:
@@ -53,12 +53,12 @@ private enum Library: String, CaseIterable {
         case .libshaderc:  // compiling GLSL (OpenGL Shading Language) shaders into SPIR-V (Standard Portable Intermediate Representation - Vulkan) code
             return "v2023.8"
         case .vulkan:
-            return "v1.2.7"
+            return "v1.2.8"
         case .libdovi:     // Library to read & write Dolby Vision metadata
-            return "libdovi-3.2.0"
+            return "libdovi-3.3.0"
         case .lcms2:
             return "lcms2.16"
-        case .spirvcross:
+        case .spirvcross:  // parsing and converting SPIR-V to other shader languages.
             return "vulkan-sdk-1.3.268.0"
         case .libplacebo:  // depend vulkan lcms2 libdovi libshaderc, provides a powerful and flexible video rendering framework for mpv
             return "v6.338.2"
@@ -84,7 +84,7 @@ private enum Library: String, CaseIterable {
         case .libsmbclient:
             return "https://github.com/samba-team/samba"
         case .nettle:
-            return "https://github.com/gnutls/nettle"
+            return "https://git.lysator.liu.se/nettle/nettle"
         case .gmp:
             return "https://github.com/alisw/GMP"
         case .libbrotli:
@@ -177,6 +177,7 @@ enum BuildFFmpeg {
             try BuildASS().buildALL()
         }
         if arguments.firstIndex(of: "enable-libsmbclient") != nil {
+            try BuildReadline().buildALL()
             try BuildGmp().buildALL()
             try BuildNettle().buildALL()
             try BuildGnutls().buildALL()
@@ -184,19 +185,19 @@ enum BuildFFmpeg {
         }
         if arguments.firstIndex(of: "enable-ffmpeg") != nil {
             // try BuildGlslang().buildALL()
-            try BuildDovi().buildALL()
-            try BuildLittleCms().buildALL()
-            try BuildShaderc().buildALL()
-            try BuildVulkan().buildALL()
-            try BuildSpirvCross().buildALL()
-            try BuildPlacebo().buildALL()
-            try BuildDav1d().buildALL()
+            // try BuildDav1d().buildALL()
+            // try BuildDovi().buildALL()
+            // try BuildLittleCms().buildALL()
+            // try BuildShaderc().buildALL()
+            // try BuildSpirvCross().buildALL()
+            // try BuildVulkan().buildALL()
+            // try BuildPlacebo().buildALL()
             try BuildFFMPEG().buildALL()
         }
         if arguments.firstIndex(of: "enable-mpv") != nil {
-            try BuildUchardet().buildALL()
-            try BuildBluray().buildALL()
-            try BuildLuaJIT().buildALL()
+            // try BuildUchardet().buildALL()
+            // try BuildBluray().buildALL()
+            // try BuildLuaJIT().buildALL()
             try BuildMPV().buildALL()
         }
     }
@@ -222,7 +223,7 @@ private class BaseBuild {
                 _ = try? Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "."], currentDirectoryURL: directoryURL)
                 let fileNames = try! FileManager.default.contentsOfDirectory(atPath: patch.path).sorted()
                 for fileName in fileNames {
-                    _ = try? Utility.launch(path: "/usr/bin/git", arguments: ["apply", "\((patch + fileName).path)"], currentDirectoryURL: directoryURL)
+                    try! Utility.launch(path: "/usr/bin/git", arguments: ["apply", "\((patch + fileName).path)"], currentDirectoryURL: directoryURL)
                 }
             }
         }
@@ -230,6 +231,7 @@ private class BaseBuild {
 
     func buildALL() throws {
         try? FileManager.default.removeItem(at: URL.currentDirectory + library.rawValue)
+        try? FileManager.default.removeItem(at: directoryURL.appendingPathExtension("log"))
         for platform in BaseBuild.platforms {
             for arch in architectures(platform) {
                 try build(platform: platform, arch: arch)
@@ -257,10 +259,6 @@ private class BaseBuild {
             if Utility.shell("which ninja") == nil {
                 Utility.shell("brew install ninja")
             }
-            // Utility.shell("brew install python3-jinja2")
-            // let python3 = Utility.shell("which python3", isOutput: true)!
-            // Utility.shell("/usr/bin/python3 -m pip install setuptools")
-            // Utility.shell("/usr/bin/python3 -m pip install wheel")
             
 
             let crossFile = createMesonCrossFile(platform: platform, arch: arch)
@@ -270,13 +268,10 @@ private class BaseBuild {
             try Utility.launch(path: meson, arguments: ["compile", "--verbose"], currentDirectoryURL: buildURL, environment: environ)
             try Utility.launch(path: meson, arguments: ["install"], currentDirectoryURL: buildURL, environment: environ)
         } else if FileManager.default.fileExists(atPath: (directoryURL + wafPath()).path) {
-            try Utility.launch(path: "/usr/bin/python3", arguments: [wafPath(), "distclean"], currentDirectoryURL: directoryURL, environment: environ)
-            try Utility.launch(path: "/usr/bin/python3", arguments: [wafPath(), "configure"] + arguments(platform: platform, arch: arch), currentDirectoryURL: directoryURL, environment: environ)
-            try runWafTargets(platform: platform, arch: arch)
-            try Utility.launch(path: "/usr/bin/python3", arguments: ["./buildtools/bin/waf", "--targets=client/smbclient"], currentDirectoryURL: directoryURL, environment: environ)
-
-            try Utility.launch(path: "/usr/bin/python3", arguments: [wafPath(), "build"], currentDirectoryURL: directoryURL, environment: environ)
-            try Utility.launch(path: "/usr/bin/python3", arguments: [wafPath(), "install"], currentDirectoryURL: directoryURL, environment: environ)
+            let waf = (directoryURL + wafPath()).path
+            try Utility.launch(path: waf, arguments: ["configure"] + arguments(platform: platform, arch: arch), currentDirectoryURL: directoryURL, environment: environ)
+            try Utility.launch(path: waf, arguments: wafBuildArg(), currentDirectoryURL: directoryURL, environment: environ)
+            try Utility.launch(path: waf, arguments: ["install"] + wafInstallArg(), currentDirectoryURL: directoryURL, environment: environ)
         } else {
             try configure(buildURL: buildURL, environ: environ, platform: platform, arch: arch)
             try Utility.launch(path: "/usr/bin/make", arguments: ["-j8"], currentDirectoryURL: buildURL, environment: environ)
@@ -288,7 +283,13 @@ private class BaseBuild {
         "./waf"
     }
 
-    func runWafTargets(platform _: PlatformType, arch _: ArchType) throws {}
+    func wafBuildArg() -> [String] {
+        ["build"]
+    }
+
+    func wafInstallArg() -> [String] {
+        []
+    }
 
     func configure(buildURL: URL, environ: [String: String], platform: PlatformType, arch: ArchType) throws {
         let autogen = directoryURL + "autogen.sh"
@@ -346,7 +347,8 @@ private class BaseBuild {
     }
 
     func environment(platform: PlatformType, arch: ArchType) -> [String: String] {
-        let cFlags = platform.cFlags(arch: arch).joined(separator: " ")
+        let cFlags = cFlags(platform: platform, arch: arch).joined(separator: " ")
+        let ldFlags = ldFlags(platform: platform, arch: arch).joined(separator: " ")
         let pkgConfigPathDefault = Utility.shell("pkg-config --variable pc_path pkg-config", isOutput: true)!
         return [
             "LC_CTYPE": "C",
@@ -357,11 +359,56 @@ private class BaseBuild {
             "CFLAGS": cFlags,
             // makefile can't use CPPFLAGS
             "CPPFLAGS": cFlags,
+            // 这个要加，不然cmake在编译maccatalyst 会有问题
             "CXXFLAGS": cFlags,
-            "LDFLAGS": platform.ldFlags(arch: arch).joined(separator: " "),
+            "LDFLAGS": ldFlags,
             "PKG_CONFIG_LIBDIR": platform.pkgConfigPath(arch: arch) + pkgConfigPathDefault,
-            // "PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/local/opt/bison/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+            "PATH": Constants.defaultPath,
         ]
+    }
+
+    func cFlags(platform: PlatformType, arch: ArchType) -> [String] {
+        var cFlags = platform.cFlags(arch: arch)
+        let librarys = flagsDependencelibrarys()
+        for library in librarys {
+            let path = URL.currentDirectory + [library.rawValue, platform.rawValue, "thin", arch.rawValue]
+            if FileManager.default.fileExists(atPath: path.path) {
+                if library == .libsmbclient {
+                    cFlags.append("-I\(path.path)/include/samba-4.0")
+                } else {
+                    cFlags.append("-I\(path.path)/include")
+                }
+            }
+        }
+        return cFlags
+    }
+
+    func ldFlags(platform: PlatformType, arch: ArchType) -> [String] {
+        var ldFlags = platform.ldFlags(arch: arch)
+        let librarys = flagsDependencelibrarys()
+        for library in librarys {
+            let path = URL.currentDirectory + [library.rawValue, platform.rawValue, "thin", arch.rawValue]
+            if FileManager.default.fileExists(atPath: path.path) {
+                var libname = library.rawValue
+                if libname.hasPrefix("lib") {
+                    libname = String(libname.dropFirst(3))
+                }
+                ldFlags.append("-L\(path.path)/lib")
+                ldFlags.append("-l\(libname)")
+                if library == .nettle {
+                    ldFlags.append("-lhogweed")
+                } else if library == .gnutls {
+                    ldFlags.append(contentsOf: ["-framework", "Security", "-framework", "CoreFoundation"])
+                } else if library == .libsmbclient {
+                    ldFlags.append(contentsOf: ["-lresolv", "-lpthread", "-lz", "-liconv"])
+                }
+            }
+        }
+        return ldFlags
+    }
+
+    func flagsDependencelibrarys() -> [Library] {
+        []
     }
 
 
@@ -510,10 +557,10 @@ private class BaseBuild {
         let url = scratch(platform: platform, arch: arch)
         let crossFile = url + "crossFile.meson"
         let prefix = thinDir(platform: platform, arch: arch)
-        let cFlags = platform.cFlags(arch: arch).map {
+        let cFlags = cFlags(platform: platform, arch: arch).map {
             "'" + $0 + "'"
         }.joined(separator: ", ")
-        let ldFlags = platform.ldFlags(arch: arch).map {
+        let ldFlags = ldFlags(platform: platform, arch: arch).map {
             "'" + $0 + "'"
         }.joined(separator: ", ")
         let content = """
@@ -560,9 +607,26 @@ private class BuildFFMPEG: BaseBuild {
     init() {
         super.init(library: .FFmpeg)
 
+        if Utility.shell("which nasm") == nil {
+            Utility.shell("brew install nasm")
+        }
+        if Utility.shell("which sdl2-config") == nil {
+            Utility.shell("brew install sdl2")
+        }
+        
         let lldbFile = URL.currentDirectory + "LLDBInitFile"
         try? FileManager.default.removeItem(at: lldbFile)
         FileManager.default.createFile(atPath: lldbFile.path, contents: nil, attributes: nil)
+        // let path = directoryURL + "libavcodec/videotoolbox.c"
+        // if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
+        //     str = str.replacingOccurrences(of: "kCVPixelBufferOpenGLESCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
+        //     str = str.replacingOccurrences(of: "kCVPixelBufferIOSurfaceOpenGLTextureCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
+        //     try? str.write(toFile: path.path, atomically: true, encoding: .utf8)
+        // }
+    }
+
+    override func flagsDependencelibrarys() -> [Library] {
+        [.gmp, .nettle, .gnutls, .libsmbclient]
     }
 
     override func frameworks() throws -> [String] {
@@ -723,7 +787,7 @@ private class BuildFFMPEG: BaseBuild {
         //        if platform == .isimulator || platform == .tvsimulator {
         //            arguments.append("--assert-level=1")
         //        }
-        for library in [Library.openssl, .libfontconfig, .libfreetype, .libharfbuzz, .libfribidi, .libass, .libsrt, .libsmbclient, .vulkan, .libshaderc, .lcms2, .libplacebo, .libdav1d, .libzvbi] {
+        for library in [Library.gmp, .gnutls, .libsmbclient, .libfontconfig, .libfreetype, .libharfbuzz, .libfribidi, .libass, .libsrt, .vulkan, .libshaderc, .lcms2, .libplacebo, .libdav1d, .libzvbi] {
             let path = URL.currentDirectory + [library.rawValue, platform.rawValue, "thin", arch.rawValue]
             if FileManager.default.fileExists(atPath: path.path) {
                 arguments.append("--enable-\(library.rawValue)")
@@ -815,28 +879,6 @@ private class BuildFFMPEG: BaseBuild {
         }
     }
 
-    override func buildALL() throws {
-        if Utility.shell("which nasm") == nil {
-            Utility.shell("brew install nasm")
-        }
-        if Utility.shell("which sdl2-config") == nil {
-            Utility.shell("brew install sdl2")
-        }
-        if Utility.shell("which gsed") == nil {
-            Utility.shell("brew install gnu-sed")
-        }
-        let lldbFile = URL.currentDirectory + "LLDBInitFile"
-        try? FileManager.default.removeItem(at: lldbFile)
-        FileManager.default.createFile(atPath: lldbFile.path, contents: nil, attributes: nil)
-        let path = directoryURL + "libavcodec/videotoolbox.c"
-        if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
-            str = str.replacingOccurrences(of: "kCVPixelBufferOpenGLESCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
-            str = str.replacingOccurrences(of: "kCVPixelBufferIOSurfaceOpenGLTextureCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
-            try str.write(toFile: path.path, atomically: true, encoding: .utf8)
-        }
-        try super.buildALL()
-    }
-
     override func frameworkExcludeHeaders(_ framework: String) -> [String] {
         if framework == "Libavcodec" {
             return ["xvmc", "vdpau", "qsv", "dxva2", "d3d11va"]
@@ -898,7 +940,8 @@ private class BuildFFMPEG: BaseBuild {
         "--enable-demuxer=hls", "--enable-demuxer=live_flv", "--enable-demuxer=loas", "--enable-demuxer=m4v",
         // matroska=mkv,mka,mks,mk3d
         "--enable-demuxer=matroska", "--enable-demuxer=mov", "--enable-demuxer=mp3", "--enable-demuxer=mpeg*",
-        "--enable-demuxer=ogg", "--enable-demuxer=rm", "--enable-demuxer=rtsp", "--enable-demuxer=rtp", "--enable-demuxer=srt",
+        "--enable-demuxer=ogg", "--enable-demuxer=rm", "--enable-demuxer=rtsp", "--enable-demuxer=rtp",
+        "--enable-demuxer=srt", "--enable-demuxer=webvtt",
         "--enable-demuxer=vc1", "--enable-demuxer=wav", "--enable-demuxer=webm_dash_manifest",
         // ./configure --list-bsfs
         "--enable-bsfs",
@@ -980,90 +1023,268 @@ private class BuildOpenSSL: BaseBuild {
 }
 
 private class BuildSmbclient: BaseBuild {
+    let heimdalUrl = "https://github.com/heimdal/heimdal.git"
+    let heimdalVersion = "heimdal-7.8.0"
+
     init() {
+        // // if use brew version python, you will need to install python-setuptools for distutils dependency error
+        // if Utility.shell("brew list python-setuptools") == nil {
+        //     Utility.shell("brew install python-setuptools")
+        // }
+
+        // install setuptools for distutils dependency
+        if Utility.shell("python -m pip list|grep setuptools") == nil {
+            Utility.shell("python -m pip install setuptools")
+        }
+
+        // To cross compile samba, need to build asn1_compile and compile_et first 
+        if Utility.shell("which asn1_compile") == nil || Utility.shell("which compile_et") == nil {
+            if Utility.shell("which makeinfo") == nil {
+                Utility.shell("brew install texinfo")
+            }
+
+            let heimdalDirectoryURL = URL.currentDirectory + "\(heimdalVersion)"
+            if !FileManager.default.fileExists(atPath: heimdalDirectoryURL.path) {
+                try! Utility.launch(path: "/usr/bin/git", arguments: ["-c", "advice.detachedHead=false", "clone", "--depth", "1", "--branch", heimdalVersion, heimdalUrl, heimdalDirectoryURL.path])
+            }
+            let heimdalPrefix = heimdalDirectoryURL + "buildtools"
+            let asn1URL = heimdalPrefix + "libexec/heimdal/asn1_compile"
+            if !FileManager.default.fileExists(atPath: asn1URL.path) {
+                let autogen = heimdalDirectoryURL + "autogen.sh"
+                try! Utility.launch(executableURL: autogen, arguments: [], currentDirectoryURL: heimdalDirectoryURL)
+                let configure = heimdalDirectoryURL + "configure"
+                let arguments = [
+                    "--prefix=\(heimdalPrefix.path)",
+                ]
+                try! Utility.launch(executableURL: configure, arguments: arguments, currentDirectoryURL: heimdalDirectoryURL)
+                try! Utility.launch(path: "/usr/bin/make", arguments: ["-j8"], currentDirectoryURL: heimdalDirectoryURL)
+                try! Utility.launch(path: "/usr/bin/make", arguments: ["-j8", "install"], currentDirectoryURL: heimdalDirectoryURL)
+            }
+        }
+
+
         super.init(library: .libsmbclient)
     }
 
-    override func scratch(platform _: PlatformType, arch _: ArchType) -> URL {
-        directoryURL
+    override func wafPath() -> String {
+        "buildtools/bin/waf"
+    }
+
+    override func cFlags(platform: PlatformType, arch: ArchType) -> [String] {
+        var cFlags = super.cFlags(platform: platform, arch: arch)
+        cFlags.append("-Wno-error=implicit-function-declaration")
+        return cFlags
+    }
+
+    override func environment(platform: PlatformType, arch: ArchType) -> [String: String] {
+        var env = super.environment(platform: platform, arch: arch)
+        let heimdalDirectoryURL = URL.currentDirectory + "\(heimdalVersion)"
+        env["PATH"] = (heimdalDirectoryURL + "buildtools/libexec/heimdal").path + ":" + (heimdalDirectoryURL + "lib/com_err").path + ":" + (directoryURL + "buildtools/bin").path + ":" + (env["PATH"] ?? "")
+        env["PYTHONHASHSEED"] = "1"
+        env["WAF_MAKE"] = "1"
+        return env
+    }
+
+    override func wafBuildArg() -> [String] {
+        ["--targets=smbclient"]
+    }
+
+    override func wafInstallArg() -> [String] {
+        ["--targets=smbclient"]
+    }
+
+    override func build(platform: PlatformType, arch: ArchType) throws {
+        try super.build(platform: platform, arch: arch)
+        try FileManager.default.copyItem(at: directoryURL + "bin/default/source3/libsmb/libsmbclient.a", to: thinDir(platform: platform, arch: arch) + "lib/libsmbclient.a")
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        [
+            "--without-cluster-support",
+            "--disable-rpath",
+            "--without-ldap",
+            "--without-pam",
+            "--enable-fhs",
+            "--without-winbind",
+            "--without-ads",
+            "--disable-avahi",
+            "--disable-cups",
+            "--without-gettext",
+            "--without-ad-dc",
+            "--without-acl-support",
+            "--without-utmp",
+            "--disable-iprint",
+            "--nopyc",
+            "--nopyo",
+            "--disable-python",
+            "--disable-symbol-versions",
+            "--without-json",
+            "--without-libarchive",
+            "--without-regedit",
+            "--without-lttng",
+            "--without-gpgme",
+            "--disable-cephfs",
+            "--disable-glusterfs",
+            "--without-syslog",
+            "--without-quotas",
+            "--bundled-libraries=ALL",
+            "--with-static-modules=!vfs_snapper,ALL",
+            "--nonshared-binary=smbtorture,smbd/smbd,client/smbclient",
+            "--builtin-libraries=!smbclient,!smbd_base,!smbstatus,ALL",
+            "--host=\(platform.host(arch: arch))",
+            "--prefix=\(thinDir(platform: platform, arch: arch).path)",
+
+            "--cross-compile",
+            "--cross-answers=cross-answers.txt",
+        ]
+    }
+}
+
+private class BuildReadline: BaseBuild {
+    init() {
+        super.init(library: .readline)
+    }
+
+    // readline 只是在编译的时候需要用到。外面不需要用到
+    override func frameworks() throws -> [String] {
+        []
+    }
+
+    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
+        [
+            "--enable-static",
+            "--disable-shared",
+            "--host=\(platform.host(arch: arch))",
+            "--prefix=\(thinDir(platform: platform, arch: arch).path)",
+        ]
     }
 }
 
 private class BuildGmp: BaseBuild {
     init() {
         super.init(library: .gmp)
+        // if Utility.shell("which makeinfo") == nil {
+        //     Utility.shell("brew install texinfo")
+        // }
     }
 
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
-        super.arguments(platform: platform, arch: arch) +
-            [
-                "--disable-maintainer-mode",
-                "--disable-assembly",
-                "--with-pic",
-                "--enable-static",
-                "--disable-shared",
-                "--disable-fast-install",
-                "--host=\(platform.host(arch: arch))",
-                "--with-sysroot=\(platform.isysroot)",
-            ]
+        [
+            "--disable-maintainer-mode",
+            "--disable-assembly",
+            "--with-pic",
+            "--enable-static",
+            "--disable-shared",
+            "--disable-fast-install",
+            "--host=\(platform.host(arch: arch))",
+            "--prefix=\(thinDir(platform: platform, arch: arch).path)",
+        ]
     }
 }
-
 private class BuildNettle: BaseBuild {
     init() {
+        if Utility.shell("which autoconf") == nil {
+            Utility.shell("brew install autoconf")
+        }
         super.init(library: .nettle)
     }
 
+    override func flagsDependencelibrarys() -> [Library] {
+        [.gmp]
+    }
+
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
-        super.arguments(platform: platform, arch: arch) +
-            [
-                "--disable-mini-gmp",
-                "--disable-assembler",
-                "--disable-openssl",
-                "--disable-gcov",
-                "--disable-documentation",
-                "--with-pic",
-                "--enable-static",
-                "--disable-shared",
-                "--disable-fast-install",
-                "--disable-dependency-tracking",
-                "--host=\(platform.host(arch: arch))",
-                "--with-sysroot=\(platform.isysroot)",
-            ]
+        [
+            "--disable-assembler",
+            "--disable-openssl",
+            "--disable-gcov",
+            "--disable-documentation",
+            "--enable-pic",
+            "--enable-static",
+            "--disable-shared",
+            "--disable-dependency-tracking",
+            "--host=\(platform.host(arch: arch))",
+            "--prefix=\(thinDir(platform: platform, arch: arch).path)",
+//                arch == .arm64 || arch == .arm64e ? "--enable-arm-neon" : "--enable-x86-aesni",
+        ]
+    }
+
+    override func frameworks() throws -> [String] {
+        [library.rawValue, "hogweed"]
     }
 }
 
 private class BuildGnutls: BaseBuild {
     init() {
+        if Utility.shell("which automake") == nil {
+            Utility.shell("brew install automake")
+        }
+        if Utility.shell("which gtkdocize") == nil {
+            Utility.shell("brew install gtk-doc")
+        }
+        if Utility.shell("which wget") == nil {
+            Utility.shell("brew install wget")
+        }
+        if Utility.shell("brew list bison") == nil {
+            Utility.shell("brew install bison")
+        }
+        if Utility.shell("which glibtoolize") == nil {
+            Utility.shell("brew install libtool")
+        }
+        if Utility.shell("which asn1Parser") == nil {
+            Utility.shell("brew install libtasn1")
+        }
         super.init(library: .gnutls)
     }
 
+    override func flagsDependencelibrarys() -> [Library] {
+        [.gmp, .nettle]
+    }
+
+    override func environment(platform: PlatformType, arch: ArchType) -> [String: String] {
+        var env = super.environment(platform: platform, arch: arch)
+        // 需要bison的版本大于2.4,系统自带的/usr/bin/bison是 2.3
+        env["PATH"] = "/usr/local/opt/bison/bin:/opt/homebrew/opt/bison/bin:" + (env["PATH"] ?? "")
+        return env
+    }
+
+    override func configure(buildURL: URL, environ: [String: String], platform: PlatformType, arch: ArchType) throws {
+        try super.configure(buildURL: buildURL, environ: environ, platform: platform, arch: arch)
+        let path = directoryURL + "lib/accelerated/aarch64/Makefile.in"
+        if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
+            str = str.replacingOccurrences(of: "AM_CCASFLAGS =", with: "#AM_CCASFLAGS=")
+            try! str.write(toFile: path.path, atomically: true, encoding: .utf8)
+        }
+    }
+
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
-        super.arguments(platform: platform, arch: arch) +
-            [
-                "--with-included-libtasn1",
-                "--with-included-unistring",
-                "--without-idn",
-                "--without-p11-kit",
-                "--enable-hardware-acceleration",
-                "--disable-openssl-compatibility",
-                "--disable-code-coverage",
-                "--disable-doc",
-                "--disable-manpages",
-                "--disable-guile",
-                "--disable-tests",
-                "--disable-tools",
-                "--disable-maintainer-mode",
-                "--disable-full-test-suite",
-                "--disable-debug",
-                "--with-pic",
-                "--enable-static",
-                "--disable-shared",
-                "--disable-fast-install",
-                "--disable-dependency-tracking",
-                "--host=\(platform.host(arch: arch))",
-                "--with-sysroot=\(platform.isysroot)",
-            ]
+        [
+            "--with-included-libtasn1",
+            "--with-included-unistring",
+            "--without-brotli",
+            "--without-idn",
+            "--without-p11-kit",
+            "--without-zlib",
+            "--without-zstd",
+            "--enable-hardware-acceleration",
+            "--disable-openssl-compatibility",
+            "--disable-code-coverage",
+            "--disable-doc",
+            "--disable-maintainer-mode",
+            "--disable-manpages",
+            "--disable-nls",
+            "--disable-rpath",
+//                "--disable-tests",
+            "--disable-tools",
+            "--disable-full-test-suite",
+            "--with-pic",
+            "--enable-static",
+            "--disable-shared",
+            "--disable-fast-install",
+            "--disable-dependency-tracking",
+            "--host=\(platform.host(arch: arch))",
+            "--prefix=\(thinDir(platform: platform, arch: arch).path)",
+        ]
     }
 }
 
@@ -1072,17 +1293,11 @@ private class BuildSRT: BaseBuild {
         super.init(library: .libsrt)
     }
 
-    override func configure(buildURL: URL, environ: [String: String], platform: PlatformType, arch: ArchType) throws {
-        let thinDirPath = thinDir(platform: platform, arch: arch).path
-
-        let arguments = [
-            (directoryURL + "CMakeLists.txt").path,
+    override func arguments(platform: PlatformType, arch _: ArchType) -> [String] {
+        [
             "-Wno-dev",
-            "-DUSE_ENCLIB=openssl",
-            "-DCMAKE_VERBOSE_MAKEFILE=0",
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_PREFIX_PATH=\(thinDirPath)",
-            "-DCMAKE_INSTALL_PREFIX=\(thinDirPath)",
+//            "-DUSE_ENCLIB=openssl",
+            "-DUSE_ENCLIB=gnutls",
             "-DENABLE_STDCXX_SYNC=1",
             "-DENABLE_CXX11=1",
             "-DUSE_OPENSSL_PC=1",
@@ -1093,8 +1308,6 @@ private class BuildSRT: BaseBuild {
             "-DENABLE_SHARED=0",
             platform == .maccatalyst ? "-DENABLE_MONOTONIC_CLOCK=0" : "-DENABLE_MONOTONIC_CLOCK=1",
         ]
-        let cmake = Utility.shell("which cmake", isOutput: true)!
-        try Utility.launch(path: cmake, arguments: arguments, currentDirectoryURL: buildURL, environment: environ)
     }
 }
 
@@ -1410,21 +1623,6 @@ private class BuildUchardet: BaseBuild {
     }
 }
 
-private class BuildReadline: BaseBuild {
-    init() {
-        super.init(library: .readline)
-    }
-
-    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
-        [
-            "--enable-static",
-            "--disable-shared",
-            "--host=\(platform.host(arch: arch))",
-            "--prefix=\(thinDir(platform: platform, arch: arch).path)",
-        ]
-    }
-}
-
 private class BuildGlslang: BaseBuild {
     init() {
         super.init(library: .libglslang)
@@ -1579,19 +1777,29 @@ private class BuildDovi: BaseBuild {
     override func buildALL() throws {
         // clear old build files
         try? FileManager.default.removeItem(at: URL.currentDirectory + self.library.rawValue)
-        try? FileManager.default.removeItem(at: URL.currentDirectory + "../Sources/Libdovi.xcframework")
 
         let version = self.library.version.replacingOccurrences(of: "libdovi-", with: "").trimmingCharacters(in: CharacterSet(charactersIn: "v"))
         let downloadUrl = "https://github.com/cxfksword/libdovi-build/releases/download/v\(version)/libdovi-\(version).tar"
+        let xcframeworkUrl = "https://github.com/cxfksword/libdovi-build/releases/download/v\(version)/Libdovi.xcframework.zip"
         let packageURL = directoryURL + "Package/"
         let releaseURL = packageURL + "Release/"
-        try? FileManager.default.removeItem(at: releaseURL)
         try? FileManager.default.createDirectory(at: packageURL, withIntermediateDirectories: true)
-        Utility.shell("wget \(downloadUrl) -O libdovi.tar", currentDirectoryURL: packageURL)
+        try? FileManager.default.removeItem(at: releaseURL)
+
+        Utility.shell("wget \(downloadUrl) -q -O libdovi.tar", currentDirectoryURL: packageURL)
         Utility.shell("tar xvf libdovi.tar", currentDirectoryURL: packageURL)
         try? FileManager.default.moveItem(at: packageURL + "libdovi", to: releaseURL)
-        let xcframeworkURL = releaseURL + "Libdovi.xcframework"
-        try? FileManager.default.copyItem(at: xcframeworkURL, to: URL.currentDirectory + "../Sources/Libdovi.xcframework")
+
+        Utility.shell("wget \(xcframeworkUrl) -q -O Libdovi.xcframework.zip", currentDirectoryURL: packageURL)
+        Utility.shell("unzip Libdovi.xcframework.zip -d Release", currentDirectoryURL: packageURL)
+        let oldXcframework = URL.currentDirectory + "../Sources/Libdovi.xcframework"
+        let newXcframework = releaseURL + "Libdovi.xcframework"
+        if FileManager.default.fileExists(atPath: newXcframework.path) {
+            try? FileManager.default.removeItem(at: oldXcframework)
+            try? FileManager.default.copyItem(at: newXcframework, to: oldXcframework)
+        } else {
+            throw NSError(domain: "xcframework not found", code: -1)
+        }
 
 
         for platform in platforms() {
@@ -1650,19 +1858,23 @@ private class BuildVulkan: BaseBuild {
         // try? FileManager.default.copyItem(at: directoryURL + "Package/Release/MoltenVK/MoltenVK.xcframework", to: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
 
         // compile is very slow, change to use github action build xciframework
-        try? FileManager.default.removeItem(at: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
         let version = self.library.version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
         let downloadUrl = "https://github.com/KhronosGroup/MoltenVK/releases/download/v\(version)/MoltenVK-all.tar"
         let packageURL = directoryURL + "Package/"
         let releaseURL = packageURL + "Release/"
         try? FileManager.default.removeItem(at: releaseURL)
         try? FileManager.default.createDirectory(at: packageURL, withIntermediateDirectories: true)
-        Utility.shell("wget \(downloadUrl) -O MoltenVK.tar", currentDirectoryURL: packageURL)
-        Utility.shell("tar xvf MoltenVK.tar", currentDirectoryURL: packageURL)
+        Utility.shell("wget \(downloadUrl) -q -O MoltenVK-all.tar", currentDirectoryURL: packageURL)
+        Utility.shell("tar xvf MoltenVK-all.tar", currentDirectoryURL: packageURL)
         try? FileManager.default.moveItem(at: packageURL + "MoltenVK", to: releaseURL)
-        let xcframeworkURL = releaseURL + "MoltenVK/MoltenVK.xcframework"
-        try? FileManager.default.copyItem(at: xcframeworkURL, to: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
-
+        let oldXcframework = URL.currentDirectory + "../Sources/MoltenVK.xcframework"
+        let newXcframework = releaseURL + "MoltenVK/static/MoltenVK.xcframework"
+        if FileManager.default.fileExists(atPath: newXcframework.path) {
+            try? FileManager.default.removeItem(at: oldXcframework)
+            try? FileManager.default.copyItem(at: newXcframework, to: oldXcframework)
+        } else {
+            throw NSError(domain: "xcframework not found", code: -1)
+        }
 
         for platform in platforms() {
             var frameworks = ["CoreFoundation", "CoreGraphics", "Foundation", "IOSurface", "Metal", "QuartzCore"]
@@ -1687,7 +1899,7 @@ private class BuildVulkan: BaseBuild {
                 let content = """
                 prefix=\((directoryURL + "Package/Release/MoltenVK").path)
                 includedir=${prefix}/include
-                libdir=${prefix}/MoltenVK.xcframework/\(platform.frameworkName)
+                libdir=${prefix}/static/MoltenVK.xcframework/\(platform.frameworkName)
 
                 Name: Vulkan-Loader
                 Description: Vulkan Loader
@@ -1779,7 +1991,7 @@ private class BuildPlacebo: BaseBuild {
 private class BuildMPV: BaseBuild {
     init() {
         super.init(library: .libmpv)
-
+ 
         let path = directoryURL + "meson.build"
         if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
             str = str.replacingOccurrences(of: "# ffmpeg", with: """
@@ -1797,6 +2009,17 @@ private class BuildMPV: BaseBuild {
             """)
             try! str.write(toFile: path.path, atomically: true, encoding: .utf8)
         }
+
+        // TODO: can delete after mpv 0.7.1
+        let lavfi = directoryURL + "filters/f_lavfi.c"
+        if let data = FileManager.default.contents(atPath: lavfi.path), var str = String(data: data, encoding: .utf8) {
+            str = str.replacingOccurrences(of: "AV_OPT_TYPE_CHANNEL_LAYOUT", with: "AV_OPT_TYPE_CHLAYOUT")
+            try? str.write(toFile: lavfi.path, atomically: true, encoding: .utf8)
+        }
+    }
+
+    override func flagsDependencelibrarys() -> [Library] {
+        [.gmp, .libsmbclient]
     }
 
 
@@ -1858,19 +2081,16 @@ private class BuildMPV: BaseBuild {
         try? FileManager.default.copyItem(at: includeSourceDirectory, to: includeDestDirectory)
     }
 
-
-
-//    override func architectures(_ platform: PlatformType) -> [ArchType] {
-//        if platform == .macos {
-//            return [.x86_64]
-//        } else {
-//            return super.architectures(platform)
-//        }
-//    }
+    // override func build(platform: PlatformType, arch: ArchType) throws {
+    //     if platform != .macos {
+    //         return
+    //     }
+    //     try super.build(platform: platform, arch: arch)
+    // }
 }
 
 private enum PlatformType: String, CaseIterable {
-    case maccatalyst, isimulator, tvsimulator, ios, tvos, macos
+    case maccatalyst, macos, isimulator, tvsimulator, ios, tvos
     var minVersion: String {
         switch self {
         case .ios, .isimulator:
@@ -2023,20 +2243,7 @@ private enum PlatformType: String, CaseIterable {
         var flags = ["-lc++", "-arch", arch.rawValue, "-isysroot", isysroot, "-target", deploymentTarget(arch), osVersionMin]
         // maccatalyst的vulkan库需要加载UIKit框架
         if self == .maccatalyst {
-            flags.append("-iframework \(isysroot)/System/iOSSupport/System/Library/Frameworks")
-        }
-        let librarys: [Library] = [.gmp, .nettle, .readline, .gnutls]
-        for library in librarys {
-            let path = URL.currentDirectory + [library.rawValue, rawValue, "thin", arch.rawValue]
-            if FileManager.default.fileExists(atPath: path.path) {
-                var libname = library.rawValue
-                if library == .nettle {
-                    libname += " -lhogweed"
-                } else if library == .gnutls {
-                    libname += " -framework Security -framework CoreFoundation"
-                }
-                flags.append("-L\(path.path)/lib -l\(libname)")
-            }
+            flags += ["-iframework", "\(isysroot)/System/iOSSupport/System/Library/Frameworks"]
         }
         return flags
     }
@@ -2050,13 +2257,6 @@ private enum PlatformType: String, CaseIterable {
 //        }
         if self == .tvos || self == .tvsimulator {
             cflags.append("-DHAVE_FORK=0")
-        }
-        let librarys: [Library] = [.gmp, .nettle, .readline, .gnutls]
-        for library in librarys {
-            let path = URL.currentDirectory + [library.rawValue, rawValue, "thin", arch.rawValue]
-            if FileManager.default.fileExists(atPath: path.path) {
-                cflags.append("-I\(path.path)/include")
-            }
         }
         return cflags
     }
@@ -2113,6 +2313,11 @@ enum ArchType: String, CaseIterable {
     }
 }
 
+
+private enum Constants {
+    static let defaultPath = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+}
+
 enum Utility {
     @discardableResult
     static func shell(_ command: String, isOutput : Bool = false, currentDirectoryURL: URL? = nil, environment: [String: String] = [:]) -> String? {
@@ -2139,8 +2344,7 @@ enum Utility {
             environment["HOME"] = ProcessInfo.processInfo.environment["HOME"]
         }
         if !environment.keys.contains("PATH") {
-            let cargo = environment["HOME"] ?? ""
-            environment["PATH"] = "\(cargo)/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+            environment["PATH"] = Constants.defaultPath
         }
         task.environment = environment
 
@@ -2159,7 +2363,7 @@ enum Utility {
             }
 
             outputFileHandle = try FileHandle(forWritingTo: logURL!)
-            // outputFileHandle?.seekToEndOfFile()
+            outputFileHandle?.seekToEndOfFile()
         }
         outputPipe.fileHandleForReading.readabilityHandler = { fileHandle in
             let data = fileHandle.availableData

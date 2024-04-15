@@ -10,7 +10,11 @@
 
 It includes scripts to build `mpv` native libraries.
 
-Ported from [kingslay/FFmpegKit](https://github.com/kingslay/FFmpegKit)
+Forked from [kingslay/FFmpegKit](https://github.com/kingslay/FFmpegKit)
+
+## About Metal support
+
+Metal support only a patch version and does not officially support it yet. Encountering any issues is not strange.
 
 ## Installation
 
@@ -23,7 +27,7 @@ https://github.com/cxfksword/MPVKit.git
 ## How to build
 
 ```bash
-swift run build enable-openssl enable-libass enable-ffmpeg enable-mpv
+swift run build enable-openssl enable-libsmbclient enable-libass enable-ffmpeg enable-mpv
 ```
 
 
