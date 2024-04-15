@@ -185,19 +185,19 @@ enum BuildFFmpeg {
         }
         if arguments.firstIndex(of: "enable-ffmpeg") != nil {
             // try BuildGlslang().buildALL()
-            // try BuildDav1d().buildALL()
-            // try BuildDovi().buildALL()
-            // try BuildLittleCms().buildALL()
-            // try BuildShaderc().buildALL()
-            // try BuildSpirvCross().buildALL()
-            // try BuildVulkan().buildALL()
-            // try BuildPlacebo().buildALL()
+            try BuildDav1d().buildALL()
+            try BuildDovi().buildALL()
+            try BuildLittleCms().buildALL()
+            try BuildShaderc().buildALL()
+            try BuildSpirvCross().buildALL()
+            try BuildVulkan().buildALL()
+            try BuildPlacebo().buildALL()
             try BuildFFMPEG().buildALL()
         }
         if arguments.firstIndex(of: "enable-mpv") != nil {
-            // try BuildUchardet().buildALL()
-            // try BuildBluray().buildALL()
-            // try BuildLuaJIT().buildALL()
+            try BuildUchardet().buildALL()
+            try BuildBluray().buildALL()
+            try BuildLuaJIT().buildALL()
             try BuildMPV().buildALL()
         }
     }
