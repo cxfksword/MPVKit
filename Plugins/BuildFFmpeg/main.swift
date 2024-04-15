@@ -14,7 +14,7 @@ private enum Library: String, CaseIterable {
         case .libmpv:
             return "v0.37.0"
         case .FFmpeg:
-            return "n7.0"
+            return "n6.1.1"
         case .libfontconfig:
             return "2.14.2"
         case .libunibreak:
@@ -53,7 +53,7 @@ private enum Library: String, CaseIterable {
         case .libshaderc:  // compiling GLSL (OpenGL Shading Language) shaders into SPIR-V (Standard Portable Intermediate Representation - Vulkan) code
             return "v2023.8"
         case .vulkan:
-            return "v1.2.8"
+            return "v1.2.7"
         case .libdovi:     // Library to read & write Dolby Vision metadata
             return "libdovi-3.3.0"
         case .lcms2:
@@ -617,12 +617,12 @@ private class BuildFFMPEG: BaseBuild {
         let lldbFile = URL.currentDirectory + "LLDBInitFile"
         try? FileManager.default.removeItem(at: lldbFile)
         FileManager.default.createFile(atPath: lldbFile.path, contents: nil, attributes: nil)
-        // let path = directoryURL + "libavcodec/videotoolbox.c"
-        // if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
-        //     str = str.replacingOccurrences(of: "kCVPixelBufferOpenGLESCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
-        //     str = str.replacingOccurrences(of: "kCVPixelBufferIOSurfaceOpenGLTextureCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
-        //     try? str.write(toFile: path.path, atomically: true, encoding: .utf8)
-        // }
+        let path = directoryURL + "libavcodec/videotoolbox.c"
+        if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
+            str = str.replacingOccurrences(of: "kCVPixelBufferOpenGLESCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
+            str = str.replacingOccurrences(of: "kCVPixelBufferIOSurfaceOpenGLTextureCompatibilityKey", with: "kCVPixelBufferMetalCompatibilityKey")
+            try? str.write(toFile: path.path, atomically: true, encoding: .utf8)
+        }
     }
 
     override func flagsDependencelibrarys() -> [Library] {
@@ -1868,7 +1868,7 @@ private class BuildVulkan: BaseBuild {
         Utility.shell("tar xvf MoltenVK-all.tar", currentDirectoryURL: packageURL)
         try? FileManager.default.moveItem(at: packageURL + "MoltenVK", to: releaseURL)
         let oldXcframework = URL.currentDirectory + "../Sources/MoltenVK.xcframework"
-        let newXcframework = releaseURL + "MoltenVK/static/MoltenVK.xcframework"
+        let newXcframework = releaseURL + "MoltenVK/MoltenVK.xcframework"
         if FileManager.default.fileExists(atPath: newXcframework.path) {
             try? FileManager.default.removeItem(at: oldXcframework)
             try? FileManager.default.copyItem(at: newXcframework, to: oldXcframework)
@@ -1899,7 +1899,7 @@ private class BuildVulkan: BaseBuild {
                 let content = """
                 prefix=\((directoryURL + "Package/Release/MoltenVK").path)
                 includedir=${prefix}/include
-                libdir=${prefix}/static/MoltenVK.xcframework/\(platform.frameworkName)
+                libdir=${prefix}/MoltenVK.xcframework/\(platform.frameworkName)
 
                 Name: Vulkan-Loader
                 Description: Vulkan Loader
@@ -2008,13 +2008,6 @@ private class BuildMPV: BaseBuild {
             endif
             """)
             try! str.write(toFile: path.path, atomically: true, encoding: .utf8)
-        }
-
-        // TODO: can delete after mpv 0.7.1
-        let lavfi = directoryURL + "filters/f_lavfi.c"
-        if let data = FileManager.default.contents(atPath: lavfi.path), var str = String(data: data, encoding: .utf8) {
-            str = str.replacingOccurrences(of: "AV_OPT_TYPE_CHANNEL_LAYOUT", with: "AV_OPT_TYPE_CHLAYOUT")
-            try? str.write(toFile: lavfi.path, atomically: true, encoding: .utf8)
         }
     }
 
