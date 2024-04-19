@@ -1,6 +1,6 @@
 # MPVKit
 
-[![mpv](https://img.shields.io/badge/mpv-v0.37.0-blue.svg)](https://github.com/mpv-player/mpv)
+[![mpv](https://img.shields.io/badge/mpv-v0.38.0-blue.svg)](https://github.com/mpv-player/mpv)
 [![ffmpeg](https://img.shields.io/badge/ffmpeg-n6.1.1-blue.svg)](https://github.com/FFmpeg/FFmpeg)
 [![license](https://img.shields.io/github/license/cxfksword/MPVKit)](https://github.com/cxfksword/MPVKit/main/LICENSE)
 
@@ -14,7 +14,7 @@ Forked from [kingslay/FFmpegKit](https://github.com/kingslay/FFmpegKit)
 
 ## About Metal support
 
-Metal support only a patch version and does not officially support it yet. Encountering any issues is not strange.
+Metal support only a patch version ([#7857](https://github.com/mpv-player/mpv/pull/7857)) and does not officially support it yet. Encountering any issues is not strange. 
 
 ## Installation
 
@@ -34,7 +34,7 @@ swift run build enable-openssl enable-libsmbclient enable-libass enable-ffmpeg e
 ## Run default mpv player
 
 ```bash
-swift run mpv --script-opts=osc-visibility=always [url]
+swift run mpv --script-opts=osc-visibility=always --input-commands='script-message display-stats-toggle' [url]
 swift run mpv --list-options
 ```
 

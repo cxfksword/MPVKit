@@ -12,9 +12,13 @@ private enum Library: String, CaseIterable {
     var version: String {
         switch self {
         case .libmpv:
-            return "v0.37.0"
+            return "v0.38.0"
         case .FFmpeg:
             return "n6.1.1"
+        case .vulkan:
+            return "v1.2.7"
+        case .libplacebo:  // depend vulkan lcms2 libdovi libshaderc, provides a powerful and flexible video rendering framework for mpv
+            return "v6.338.2"
         case .libfontconfig:
             return "2.14.2"
         case .libunibreak:
@@ -52,16 +56,12 @@ private enum Library: String, CaseIterable {
             return "13.1.1"
         case .libshaderc:  // compiling GLSL (OpenGL Shading Language) shaders into SPIR-V (Standard Portable Intermediate Representation - Vulkan) code
             return "v2023.8"
-        case .vulkan:
-            return "v1.2.7"
         case .libdovi:     // Library to read & write Dolby Vision metadata
             return "libdovi-3.3.0"
         case .lcms2:
             return "lcms2.16"
         case .spirvcross:  // parsing and converting SPIR-V to other shader languages.
             return "vulkan-sdk-1.3.268.0"
-        case .libplacebo:  // depend vulkan lcms2 libdovi libshaderc, provides a powerful and flexible video rendering framework for mpv
-            return "v6.338.2"
         case .libdav1d:    // AV1 decoding
             return "1.3.0"
         case .libzvbi:     // teletext support
@@ -184,7 +184,6 @@ enum BuildFFmpeg {
             try BuildSmbclient().buildALL()
         }
         if arguments.firstIndex(of: "enable-ffmpeg") != nil {
-            // try BuildGlslang().buildALL()
             try BuildDav1d().buildALL()
             try BuildDovi().buildALL()
             try BuildLittleCms().buildALL()
@@ -204,6 +203,7 @@ enum BuildFFmpeg {
 }
 
 private class BaseBuild {
+    static let defaultPath = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     static var platforms = PlatformType.allCases
     static var isDebug: Bool = false
     let library: Library
@@ -363,7 +363,7 @@ private class BaseBuild {
             "CXXFLAGS": cFlags,
             "LDFLAGS": ldFlags,
             "PKG_CONFIG_LIBDIR": platform.pkgConfigPath(arch: arch) + pkgConfigPathDefault,
-            "PATH": Constants.defaultPath,
+            "PATH": BaseBuild.defaultPath,
         ]
     }
 
@@ -2045,6 +2045,7 @@ private class BuildMPV: BaseBuild {
             array.append("-Dswift-flags=-sdk \(platform.isysroot) -target \(platform.deploymentTarget(arch))")
             array.append("-Dcocoa=enabled")
             array.append("-Dcoreaudio=enabled")
+            array.append("-Davfoundation=enabled")
             array.append("-Dgl-cocoa=enabled")
             array.append("-Dvideotoolbox-gl=enabled")
             array.append("-Dlua=luajit")  // macos show video stats need enable 
@@ -2052,10 +2053,11 @@ private class BuildMPV: BaseBuild {
             array.append("-Dvideotoolbox-gl=disabled")
             array.append("-Dswift-build=disabled")
             array.append("-Daudiounit=enabled")
+            array.append("-Davfoundation=disabled")
+            array.append("-Dcoreaudio=disabled")
             array.append("-Dlua=disabled")
             if platform == .maccatalyst {
                 array.append("-Dcocoa=disabled")
-                array.append("-Dcoreaudio=disabled")
             } else {
                 array.append("-Dios-gl=enabled")
             }
@@ -2083,7 +2085,7 @@ private class BuildMPV: BaseBuild {
 }
 
 private enum PlatformType: String, CaseIterable {
-    case maccatalyst, macos, isimulator, tvsimulator, ios, tvos
+    case maccatalyst, macos, isimulator, tvsimulator, tvos, ios
     var minVersion: String {
         switch self {
         case .ios, .isimulator:
@@ -2091,7 +2093,7 @@ private enum PlatformType: String, CaseIterable {
         case .tvos, .tvsimulator:
             return "13.0"
         case .macos:
-            return "10.15"
+            return "11.0"
         case .maccatalyst:
             // return "14.0"
             return ""
@@ -2307,9 +2309,6 @@ enum ArchType: String, CaseIterable {
 }
 
 
-private enum Constants {
-    static let defaultPath = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-}
 
 enum Utility {
     @discardableResult
@@ -2337,7 +2336,7 @@ enum Utility {
             environment["HOME"] = ProcessInfo.processInfo.environment["HOME"]
         }
         if !environment.keys.contains("PATH") {
-            environment["PATH"] = Constants.defaultPath
+            environment["PATH"] = BaseBuild.defaultPath
         }
         task.environment = environment
 
