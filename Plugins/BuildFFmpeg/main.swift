@@ -14,9 +14,9 @@ private enum Library: String, CaseIterable {
         case .libmpv:
             return "v0.38.0"
         case .FFmpeg:
-            return "n6.1.1"
+            return "n7.0"
         case .vulkan:
-            return "v1.2.7"
+            return "v1.2.8"
         case .libplacebo:  // depend vulkan lcms2 libdovi libshaderc, provides a powerful and flexible video rendering framework for mpv
             return "v6.338.2"
         case .libfontconfig:
@@ -1868,7 +1868,7 @@ private class BuildVulkan: BaseBuild {
         Utility.shell("tar xvf MoltenVK-all.tar", currentDirectoryURL: packageURL)
         try? FileManager.default.moveItem(at: packageURL + "MoltenVK", to: releaseURL)
         let oldXcframework = URL.currentDirectory + "../Sources/MoltenVK.xcframework"
-        let newXcframework = releaseURL + "MoltenVK/MoltenVK.xcframework"
+        let newXcframework = releaseURL + "MoltenVK/static/MoltenVK.xcframework"
         if FileManager.default.fileExists(atPath: newXcframework.path) {
             try? FileManager.default.removeItem(at: oldXcframework)
             try? FileManager.default.copyItem(at: newXcframework, to: oldXcframework)
@@ -1899,7 +1899,7 @@ private class BuildVulkan: BaseBuild {
                 let content = """
                 prefix=\((directoryURL + "Package/Release/MoltenVK").path)
                 includedir=${prefix}/include
-                libdir=${prefix}/MoltenVK.xcframework/\(platform.frameworkName)
+                libdir=${prefix}/static/MoltenVK.xcframework/\(platform.frameworkName)
 
                 Name: Vulkan-Loader
                 Description: Vulkan Loader
@@ -2054,10 +2054,10 @@ private class BuildMPV: BaseBuild {
             array.append("-Dswift-build=disabled")
             array.append("-Daudiounit=enabled")
             array.append("-Davfoundation=disabled")
-            array.append("-Dcoreaudio=disabled")
             array.append("-Dlua=disabled")
             if platform == .maccatalyst {
                 array.append("-Dcocoa=disabled")
+                array.append("-Dcoreaudio=disabled")
             } else {
                 array.append("-Dios-gl=enabled")
             }

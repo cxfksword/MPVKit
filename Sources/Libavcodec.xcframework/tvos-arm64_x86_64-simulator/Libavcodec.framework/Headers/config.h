@@ -3,19 +3,17 @@
 #define FFMPEG_CONFIG_H
 #define FFMPEG_CONFIGURATION "--prefix=/Users/cxf/Dev/MPVKit/Script/FFmpeg/tvsimulator/thin/arm64 --disable-armv5te --disable-armv6 --disable-armv6t2 --disable-bzlib --disable-gray --disable-iconv --disable-linux-perf --disable-shared --disable-small --disable-swscale-alpha --disable-symver --disable-xlib --enable-cross-compile --enable-gpl --enable-libxml2 --enable-nonfree --enable-optimizations --enable-pic --enable-runtime-cpudetect --enable-static --enable-thumb --enable-version3 --pkg-config-flags=--static --disable-doc --disable-htmlpages --disable-manpages --disable-podpages --disable-txtpages --enable-avcodec --enable-avformat --enable-avutil --enable-network --enable-swresample --enable-swscale --disable-devices --disable-outdevs --disable-indevs --disable-postproc --disable-d3d11va --disable-dxva2 --disable-vaapi --disable-vdpau --disable-muxers --enable-muxer=flac --enable-muxer=dash --enable-muxer=hevc --enable-muxer=m4v --enable-muxer=matroska --enable-muxer=mov --enable-muxer=mp4 --enable-muxer=mpegts --enable-muxer='webm*' --disable-encoders --enable-encoder=aac --enable-encoder=alac --enable-encoder=flac --enable-encoder='pcm*' --enable-encoder=movtext --enable-encoder=mpeg4 --enable-encoder=h264_videotoolbox --enable-encoder=hevc_videotoolbox --enable-encoder=prores --enable-encoder=prores_videotoolbox --enable-protocols --disable-demuxers --enable-demuxer=aac --enable-demuxer=ac3 --enable-demuxer=aiff --enable-demuxer=amr --enable-demuxer=ape --enable-demuxer=asf --enable-demuxer=ass --enable-demuxer=av1 --enable-demuxer=avi --enable-demuxer=caf --enable-demuxer=concat --enable-demuxer=dash --enable-demuxer=data --enable-demuxer=dv --enable-demuxer=eac3 --enable-demuxer=flac --enable-demuxer=flv --enable-demuxer=h264 --enable-demuxer=hevc --enable-demuxer=hls --enable-demuxer=live_flv --enable-demuxer=loas --enable-demuxer=m4v --enable-demuxer=matroska --enable-demuxer=mov --enable-demuxer=mp3 --enable-demuxer='mpeg*' --enable-demuxer=ogg --enable-demuxer=rm --enable-demuxer=rtsp --enable-demuxer=rtp --enable-demuxer=srt --enable-demuxer=webvtt --enable-demuxer=vc1 --enable-demuxer=wav --enable-demuxer=webm_dash_manifest --enable-bsfs --disable-decoders --enable-decoder=av1 --enable-decoder=dca --enable-decoder=dxv --enable-decoder=ffv1 --enable-decoder=ffvhuff --enable-decoder=flv --enable-decoder=h263 --enable-decoder=h263i --enable-decoder=h263p --enable-decoder=h264 --enable-decoder=hap --enable-decoder=hevc --enable-decoder=huffyuv --enable-decoder=indeo5 --enable-decoder=mjpeg --enable-decoder=mjpegb --enable-decoder='mpeg*' --enable-decoder=mts2 --enable-decoder=prores --enable-decoder=mpeg4 --enable-decoder=mpegvideo --enable-decoder=rv10 --enable-decoder=rv20 --enable-decoder=rv30 --enable-decoder=rv40 --enable-decoder=snow --enable-decoder=svq3 --enable-decoder=tscc --enable-decoder=txd --enable-decoder=wmv1 --enable-decoder=wmv2 --enable-decoder=wmv3 --enable-decoder=vc1 --enable-decoder=vp6 --enable-decoder=vp6a --enable-decoder=vp6f --enable-decoder=vp7 --enable-decoder=vp8 --enable-decoder=vp9 --enable-decoder='aac*' --enable-decoder='ac3*' --enable-decoder='adpcm*' --enable-decoder='alac*' --enable-decoder='amr*' --enable-decoder=ape --enable-decoder=cook --enable-decoder=dca --enable-decoder=dolby_e --enable-decoder='eac3*' --enable-decoder=flac --enable-decoder='mp1*' --enable-decoder='mp2*' --enable-decoder='mp3*' --enable-decoder=opus --enable-decoder='pcm*' --enable-decoder=sonic --enable-decoder=truehd --enable-decoder=tta --enable-decoder=vorbis --enable-decoder='wma*' --enable-decoder=ass --enable-decoder=ccaption --enable-decoder=dvbsub --enable-decoder=dvdsub --enable-decoder=mpl2 --enable-decoder=movtext --enable-decoder=pgssub --enable-decoder=srt --enable-decoder=ssa --enable-decoder=subrip --enable-decoder=xsub --enable-decoder=webvtt --disable-filters --enable-filter=aformat --enable-filter=amix --enable-filter=anull --enable-filter=aresample --enable-filter=areverse --enable-filter=asetrate --enable-filter=atempo --enable-filter=atrim --enable-filter=bwdif --enable-filter=delogo --enable-filter=equalizer --enable-filter=estdif --enable-filter=firequalizer --enable-filter=format --enable-filter=fps --enable-filter=hflip --enable-filter=hwdownload --enable-filter=hwmap --enable-filter=hwupload --enable-filter=idet --enable-filter=lenscorrection --enable-filter='lut*' --enable-filter=negate --enable-filter=null --enable-filter=overlay --enable-filter=palettegen --enable-filter=paletteuse --enable-filter=pan --enable-filter=rotate --enable-filter=scale --enable-filter=setpts --enable-filter=superequalizer --enable-filter=transpose --enable-filter=trim --enable-filter=vflip --enable-filter=volume --enable-filter=w3fdif --enable-filter=yadif --enable-filter=avgblur_vulkan --enable-filter=blend_vulkan --enable-filter=bwdif_vulkan --enable-filter=chromaber_vulkan --enable-filter=flip_vulkan --enable-filter=gblur_vulkan --enable-filter=hflip_vulkan --enable-filter=nlmeans_vulkan --enable-filter=overlay_vulkan --enable-filter=vflip_vulkan --enable-filter=xfade_vulkan --disable-debug --enable-stripping --enable-optimizations --disable-large-tests --ignore-tests=TESTS --arch=aarch64 --target-os=darwin --enable-neon --enable-asm --disable-avdevice --disable-programs --enable-gmp --enable-gnutls --enable-libsmbclient --enable-protocol=libsmbclient --enable-libfontconfig --enable-libfreetype --enable-libharfbuzz --enable-libfribidi --enable-libass --enable-filter=ass --enable-filter=subtitles --enable-vulkan --enable-libshaderc --enable-lcms2 --enable-libplacebo --enable-filter=libplacebo --enable-libdav1d --enable-decoder=libdav1d"
 #define FFMPEG_LICENSE "nonfree and unredistributable"
-#define CONFIG_THIS_YEAR 2023
+#define CONFIG_THIS_YEAR 2024
 #define FFMPEG_DATADIR "/Users/cxf/Dev/MPVKit/Script/FFmpeg/tvsimulator/thin/arm64/share/ffmpeg"
 #define AVCONV_DATADIR "/Users/cxf/Dev/MPVKit/Script/FFmpeg/tvsimulator/thin/arm64/share/ffmpeg"
 #define CC_IDENT "Apple clang version 14.0.3 (clang-1403.0.22.14.1)"
 #define OS_NAME darwin
-#define av_restrict restrict
 #define EXTERN_PREFIX "_"
 #define EXTERN_ASM _
 #define BUILDSUF ""
 #define SLIBSUF ".dylib"
-#define HAVE_MMX2 HAVE_MMXEXT
 #define SWS_MAX_FILTER_SIZE 256
-#define AS_ARCH_LEVEL armv8.2-a
+#define AS_ARCH_LEVEL armv8.6-a+crc
 #define ARCH_AARCH64 1
 #define ARCH_ALPHA 0
 #define ARCH_ARM 0
@@ -48,7 +46,7 @@
 #define HAVE_ARMV6T2 0
 #define HAVE_ARMV8 1
 #define HAVE_DOTPROD 1
-#define HAVE_I8MM 0
+#define HAVE_I8MM 1
 #define HAVE_NEON 1
 #define HAVE_VFP 0
 #define HAVE_VFPV3 0
@@ -59,6 +57,7 @@
 #define HAVE_POWER8 0
 #define HAVE_PPC4XX 0
 #define HAVE_VSX 0
+#define HAVE_RV 0
 #define HAVE_RVV 0
 #define HAVE_AESNI 0
 #define HAVE_AMD3DNOW 0
@@ -78,7 +77,6 @@
 #define HAVE_SSE42 0
 #define HAVE_SSSE3 0
 #define HAVE_XOP 0
-#define HAVE_CPUNOP 0
 #define HAVE_I686 0
 #define HAVE_MIPSFPU 0
 #define HAVE_MIPS32R2 0
@@ -110,6 +108,7 @@
 #define HAVE_POWER8_EXTERNAL 0
 #define HAVE_PPC4XX_EXTERNAL 0
 #define HAVE_VSX_EXTERNAL 0
+#define HAVE_RV_EXTERNAL 0
 #define HAVE_RVV_EXTERNAL 0
 #define HAVE_AESNI_EXTERNAL 0
 #define HAVE_AMD3DNOW_EXTERNAL 0
@@ -129,7 +128,6 @@
 #define HAVE_SSE42_EXTERNAL 0
 #define HAVE_SSSE3_EXTERNAL 0
 #define HAVE_XOP_EXTERNAL 0
-#define HAVE_CPUNOP_EXTERNAL 0
 #define HAVE_I686_EXTERNAL 0
 #define HAVE_MIPSFPU_EXTERNAL 0
 #define HAVE_MIPS32R2_EXTERNAL 0
@@ -161,6 +159,7 @@
 #define HAVE_POWER8_INLINE 0
 #define HAVE_PPC4XX_INLINE 0
 #define HAVE_VSX_INLINE 0
+#define HAVE_RV_INLINE 0
 #define HAVE_RVV_INLINE 0
 #define HAVE_AESNI_INLINE 0
 #define HAVE_AMD3DNOW_INLINE 0
@@ -180,7 +179,6 @@
 #define HAVE_SSE42_INLINE 0
 #define HAVE_SSSE3_INLINE 0
 #define HAVE_XOP_INLINE 0
-#define HAVE_CPUNOP_INLINE 0
 #define HAVE_I686_INLINE 0
 #define HAVE_MIPSFPU_INLINE 0
 #define HAVE_MIPS32R2_INLINE 0
@@ -243,6 +241,7 @@
 #define HAVE_OPENCV2_CORE_CORE_C_H 0
 #define HAVE_OPENGL_GL3_H 0
 #define HAVE_POLL_H 1
+#define HAVE_PTHREAD_NP_H 0
 #define HAVE_SYS_PARAM_H 1
 #define HAVE_SYS_RESOURCE_H 1
 #define HAVE_SYS_SELECT_H 1
@@ -333,6 +332,8 @@
 #define HAVE_POSIX_MEMALIGN 1
 #define HAVE_PRCTL 0
 #define HAVE_PTHREAD_CANCEL 1
+#define HAVE_PTHREAD_SET_NAME_NP 0
+#define HAVE_PTHREAD_SETNAME_NP 1
 #define HAVE_SCHED_GETAFFINITY 0
 #define HAVE_SECITEMIMPORT 0
 #define HAVE_SETCONSOLETEXTATTRIBUTE 0
@@ -424,6 +425,7 @@
 #define HAVE_OPENCL_DXVA2 0
 #define HAVE_OPENCL_VAAPI_BEIGNET 0
 #define HAVE_OPENCL_VAAPI_INTEL_MEDIA 0
+#define HAVE_OPENCL_VIDEOTOOLBOX 0
 #define HAVE_PERL 1
 #define HAVE_POD2MAN 1
 #define HAVE_TEXI2HTML 0
@@ -463,6 +465,8 @@
 #define CONFIG_FREI0R 0
 #define CONFIG_LIBCDIO 0
 #define CONFIG_LIBDAVS2 0
+#define CONFIG_LIBDVDNAV 0
+#define CONFIG_LIBDVDREAD 0
 #define CONFIG_LIBRUBBERBAND 0
 #define CONFIG_LIBVIDSTAB 0
 #define CONFIG_LIBX264 0
@@ -498,7 +502,6 @@
 #define CONFIG_LIBCODEC2 0
 #define CONFIG_LIBDAV1D 1
 #define CONFIG_LIBDC1394 0
-#define CONFIG_LIBDRM 0
 #define CONFIG_LIBFLITE 0
 #define CONFIG_LIBFONTCONFIG 1
 #define CONFIG_LIBFREETYPE 1
@@ -524,6 +527,8 @@
 #define CONFIG_LIBOPUS 0
 #define CONFIG_LIBPLACEBO 1
 #define CONFIG_LIBPULSE 0
+#define CONFIG_LIBQRENCODE 0
+#define CONFIG_LIBQUIRC 0
 #define CONFIG_LIBRABBITMQ 0
 #define CONFIG_LIBRAV1E 0
 #define CONFIG_LIBRIST 0
@@ -541,6 +546,7 @@
 #define CONFIG_LIBTENSORFLOW 0
 #define CONFIG_LIBTESSERACT 0
 #define CONFIG_LIBTHEORA 0
+#define CONFIG_LIBTORCH 0
 #define CONFIG_LIBTWOLAME 0
 #define CONFIG_LIBUAVS3D 0
 #define CONFIG_LIBV4L2 0
@@ -548,6 +554,8 @@
 #define CONFIG_LIBVORBIS 0
 #define CONFIG_LIBVPX 0
 #define CONFIG_LIBWEBP 0
+#define CONFIG_LIBXEVD 0
+#define CONFIG_LIBXEVE 0
 #define CONFIG_LIBXML2 1
 #define CONFIG_LIBZIMG 0
 #define CONFIG_LIBZMQ 0
@@ -588,13 +596,14 @@
 #define CONFIG_OPENCL 0
 #define CONFIG_AMF 0
 #define CONFIG_AUDIOTOOLBOX 1
-#define CONFIG_CRYSTALHD 0
 #define CONFIG_CUDA 0
 #define CONFIG_CUDA_LLVM 0
 #define CONFIG_CUVID 0
 #define CONFIG_D3D11VA 0
+#define CONFIG_D3D12VA 0
 #define CONFIG_DXVA2 0
 #define CONFIG_FFNVCODEC 0
+#define CONFIG_LIBDRM 0
 #define CONFIG_NVDEC 0
 #define CONFIG_NVENC 0
 #define CONFIG_VAAPI 0
@@ -673,6 +682,7 @@
 #define CONFIG_CBS_H266 1
 #define CONFIG_CBS_JPEG 0
 #define CONFIG_CBS_MPEG2 1
+#define CONFIG_CBS_VP8 1
 #define CONFIG_CBS_VP9 1
 #define CONFIG_DEFLATE_WRAPPER 0
 #define CONFIG_DIRAC_PARSE 1
@@ -702,6 +712,8 @@
 #define CONFIG_HUFFMAN 1
 #define CONFIG_HUFFYUVDSP 1
 #define CONFIG_HUFFYUVENCDSP 0
+#define CONFIG_IAMFDEC 1
+#define CONFIG_IAMFENC 1
 #define CONFIG_IDCTDSP 1
 #define CONFIG_IIRFILTER 1
 #define CONFIG_INFLATE_WRAPPER 1
@@ -711,6 +723,7 @@
 #define CONFIG_JPEGTABLES 1
 #define CONFIG_LGPLV3 0
 #define CONFIG_LIBX262 0
+#define CONFIG_LIBX264_HDR10 0
 #define CONFIG_LLAUDDSP 1
 #define CONFIG_LLVIDDSP 1
 #define CONFIG_LLVIDENCDSP 0
