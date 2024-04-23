@@ -5,7 +5,7 @@ import MPVKit
 // warning: metal API validation has been disabled to ignore crash when playing HDR videos.
 // Edit Scheme -> Run -> Diagnostics -> Metal API Validation -> Turn it off
 final class MPVMetalViewController: UIViewController {
-    var metalLayer = CAMetalLayer()
+    var metalLayer = MetalLayer()
     var mpv: OpaquePointer!
     lazy var queue = DispatchQueue(label: "mpv", qos: .userInitiated)
     
