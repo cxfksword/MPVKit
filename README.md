@@ -1,3 +1,6 @@
+> [!NOTE]  
+> New version has move to repository: https://github.com/mpvkit/MPVKit
+
 # MPVKit
 
 [![mpv](https://img.shields.io/badge/mpv-v0.38.0-blue.svg)](https://github.com/mpv-player/mpv)
